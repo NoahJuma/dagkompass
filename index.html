@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f2ed">
+  <title>Dagkompass</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #26332d;
+      --muted: #707a72;
+      --paper: #f2f0e8;
+      --card: #fffefa;
+      --line: #e4e6dc;
+      --green: #35634e;
+      --on-green: #ffffff;
+      --toast-bg: #26332d;
+      --toast-ink: #ffffff;
+      --green-soft: #eaf1e9;
+      --amber: #f5eedf;
+      --red: #9b4d3c;
+      --shadow: 0 12px 32px rgba(45, 55, 46, .055);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(ellipse at 50% -18%, #fffdf8 0, var(--paper) 56%, #edf0e9 100%);
+      color: var(--ink);
+      font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 56px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--green); color: white; font-size: 21px; }
+    .brand-name { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+    .brand-caption { color: var(--muted); font-size: 12px; }
+    .header-note { color: var(--muted); font-size: 13px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+    .side-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .layout > *, .main-card, .side-card { min-width: 0; }
+    .main-card, .side-card { background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow); }
+    .main-card { padding: clamp(20px, 4vw, 34px); }
+    .side-card { padding: 24px; margin-bottom: 16px; transition: box-shadow .2s ease, transform .2s ease; }
+    .eyebrow { color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+    h1 { margin: 7px 0 6px; font-size: clamp(27px, 4vw, 37px); line-height: 1.08; letter-spacing: -.045em; }
+    .intro { margin: 0; max-width: 610px; color: var(--muted); }
+    .topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 14px; margin-bottom: 23px; }
+    .date-wrap { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12px; }
+    .date-wrap input { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--ink); background: white; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }
+    .small-note { color: var(--muted); font-size: 12px; }
+    .week-toolbar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+    .week-toolbar .btn { min-height: 36px; padding: 6px 11px; }
+    .view-switch { display: inline-flex; padding: 3px; margin-left: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); }
+    .view-switch .btn { min-height: 30px; border: 0; padding: 4px 10px; background: transparent; color: var(--muted); }
+    .view-switch .btn.active { background: var(--green-soft); color: var(--green); }
+    .week-label { margin-left: auto; color: var(--muted); font-size: 12px; text-align: right; }
+    .week-scroll { max-height: min(74vh, 780px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--card); overscroll-behavior: contain; box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+    .week-board { display: grid; grid-template-columns: 48px repeat(7, minmax(112px, 1fr)); min-width: 832px; }
+    .week-board.day-view { grid-template-columns: 48px minmax(0, 1fr); min-width: 0; }
+    .week-corner, .week-day-head { position: sticky; top: 0; z-index: 5; min-height: 46px; display: flex; align-items: center; justify-content: center; padding: 5px; border: 0; border-bottom: 1px solid var(--line); background: var(--card); color: var(--ink); }
+    .week-corner { left: 0; z-index: 7; }
+    .week-day-head { flex-direction: column; gap: 1px; border-left: 1px solid var(--line); font-size: 11px; }
+    .week-day-head.selected { color: var(--green); background: var(--green-soft); }
+    .week-time-column { position: sticky; left: 0; z-index: 3; height: 1380px; background: var(--card); }
+    .week-hour { height: 60px; padding: 0 6px 0 0; transform: translateY(-7px); color: var(--muted); font-size: 10px; text-align: right; font-variant-numeric: tabular-nums; }
+    .week-day-body { position: relative; height: 1380px; min-width: 0; border-left: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 59px, var(--line) 59px, var(--line) 60px); }
+    .week-day-body.selected { background-color: color-mix(in srgb, var(--green-soft) 34%, transparent); }
+    .week-day-body.drag-over { box-shadow: inset 0 0 0 2px var(--green); }
+    .week-event { position: absolute; left: 2px; width: calc(100% - 4px); min-width: 0; min-height: 0; z-index: 2; display: flex; flex-direction: column; gap: 2px; overflow: visible; padding: 3px 5px; border: 1px solid color-mix(in srgb, var(--event-color, #789) 55%, transparent); border-left: 3px solid var(--event-color, #789); border-radius: 7px; background: color-mix(in srgb, var(--event-color, #789) 18%, var(--card)); color: var(--ink); text-align: left; cursor: grab; }
+    .week-event:active { cursor: grabbing; }
+    .week-event.dragging { opacity: .45; }
+    .week-event.move-selected { outline: 2px solid var(--green); outline-offset: 1px; }
+    .week-event-time { flex: 0 0 auto; color: var(--muted); font-size: 9px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .week-event-title { overflow: hidden; font-size: 10px; font-weight: 700; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+    .week-event.short .week-event-title { display: none; }
+    .week-event.prayer-event { z-index: 3; padding: 0 2px; gap: 0; border-radius: 3px; }
+    .week-event.prayer-event .week-event-time { display: none; }
+    .week-event.prayer-event .week-event-title { display: block; overflow: hidden; font-size: 9px; line-height: 12px; }
+    .week-event.prayer-event.short .week-event-title { display: block; }
+    .week-event-end { position: absolute; top: 100%; left: 2px; z-index: 4; padding: 1px 3px; border-radius: 4px; background: var(--card); color: var(--muted); font-size: 9px; line-height: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+    .week-event-resize { position: absolute; right: 0; left: 0; z-index: 5; height: 12px; cursor: ns-resize; touch-action: none; }
+    .week-event-resize.top { top: -2px; }
+    .week-event-resize.bottom { bottom: -2px; }
+    .week-event-resize::after { content: ""; position: absolute; right: 35%; left: 35%; height: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
+    .week-event-resize.top::after { top: 3px; }
+    .week-event-resize.bottom::after { bottom: 3px; }
+    .week-event.short .week-event-resize { height: 6px; }
+    .week-event.short .week-event-resize.top::after { top: 2px; }
+    .week-event.short .week-event-resize.bottom::after { bottom: 2px; }
+    .week-empty { grid-column: 1 / -1; padding: 18px; color: var(--muted); }
+    .week-hint { margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .event-color-field input { height: 40px; padding: 3px; }
+    .color-swatches { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .color-swatch { width: 27px; height: 27px; padding: 0; border: 2px solid var(--card); border-radius: 50%; background: var(--swatch); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+    .color-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--green); }
+    .color-swatch:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+    .timeline { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 0; min-width: 0; width: 100%; overflow-x: hidden; }
+    .calendar-time { grid-column: 1; align-self: start; height: 1px; padding-right: 7px; transform: translateY(-9px); color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; text-align: right; }
+    .calendar-slot { grid-column: 2; min-width: 0; border-top: 1px solid var(--line); cursor: crosshair; }
+    .calendar-slot.hour { border-top-color: #d2d8cf; }
+    .calendar-slot.drag-over { background: var(--green-soft); box-shadow: inset 0 2px var(--green); }
+    .calendar-hint { grid-column: 1 / -1; padding: 0 0 10px 48px; color: var(--muted); font-size: 11px; }
+    .block { grid-column: 2; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 11px; background: white; border: 1px solid var(--line); border-radius: 12px; min-width: 0; width: calc(100% - 8px); margin: 2px 4px; z-index: 2; box-shadow: 0 2px 8px rgba(31,48,39,.06); }
+    .block.prayer { min-height: 0; padding: 4px 8px; }
+    .block.prayer .block-meta { display: none; }
+    .block.done { opacity: .58; }
+    .block.done .block-title { text-decoration: line-through; }
+    .block[draggable="true"] { cursor: grab; }
+    .block.dragging { opacity: .45; }
+    .block.move-selected { outline: 2px solid var(--green); background: var(--green-soft); }
+    .block-time { color: var(--green); font-size: 11px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .block-title { width: 100%; min-width: 0; border: 0; outline: 0; padding: 0; color: var(--ink); background: transparent; font-weight: 680; }
+    .block-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .tag { padding: 2px 7px; border-radius: 20px; background: var(--green-soft); color: var(--green); font-weight: 650; }
+    .tag.fixed { background: var(--amber); color: #735b25; }
+    .block-actions { display: flex; align-items: center; gap: 7px; }
+    .icon-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--muted); }
+    .check { width: 18px; height: 18px; accent-color: var(--green); }
+    .empty { padding: 20px; border: 1px dashed #c9cec5; border-radius: 14px; color: var(--muted); text-align: center; }
+    .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; border: 1px solid var(--line); border-radius: 14px; padding: 9px 15px; background: color-mix(in srgb, var(--card) 92%, white); color: var(--ink); font-weight: 650; }
+    .btn:hover, .icon-button:hover { border-color: #a9b9ac; }
+    .btn { transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease; }
+    .btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(39,61,45,.08); }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--green) 42%, transparent); outline-offset: 2px; }
+    .btn:disabled { opacity: .52; cursor: not-allowed; }
+    .btn.primary { background: var(--green); border-color: var(--green); color: var(--on-green); }
+    .btn.primary:hover { background: color-mix(in srgb, var(--green) 88%, var(--ink)); }
+    .btn.soft { background: var(--green-soft); border-color: transparent; color: var(--green); }
+    .approve { width: 100%; margin-top: 13px; padding: 13px; }
+    .approval-state { min-height: 18px; margin: 9px 2px 0; color: var(--green); font-size: 12px; }
+    .evening-check { margin: 0 0 24px; padding: 18px; border: 1px solid #e3e9df; border-radius: 18px; background: linear-gradient(145deg, #f5f7f0, #fbfaf5 78%); }
+    .evening-check p { margin: 5px 0 12px; color: var(--muted); font-size: 12px; }
+    .focus-field { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12px; }
+    .focus-field input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: white; }
+    .focus-field input.completed { color: var(--muted); text-decoration: line-through; background: #f2f2ed; }
+    .focus-done { display: none; align-items: center; gap: 8px; margin-top: 9px; color: var(--green); font-size: 12px; font-weight: 650; }
+    .focus-done.visible { display: flex; }
+    .focus-done input { width: 18px; height: 18px; accent-color: var(--green); }
+    .buffer-note { margin-top: 9px; color: var(--green); font-size: 11px; }
+    .side-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 11px; }
+    .field input, .field select { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fff; }
+    .prayer-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-top: 13px; }
+    .prayer-list .field:last-child { grid-column: span 2; }
+    .prayer-help { margin: 11px 0 0; color: var(--muted); font-size: 11px; }
+    .rule { height: 1px; background: var(--line); margin: 16px 0; }
+    .week-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0efe9; font-size: 13px; }
+    .week-row:last-child { border: 0; padding-bottom: 0; }
+    .week-row span:last-child { color: var(--muted); }
+    .sync-note { padding: 12px; border-radius: 13px; background: #f6f5f0; color: var(--muted); font-size: 12px; }
+    .history-list { display: grid; gap: 9px; margin-top: 12px; }
+    .history-week { padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .history-week strong { display: block; margin-bottom: 5px; font-size: 12px; }
+    .history-week div { color: var(--muted); font-size: 11px; }
+    .review-question { margin: 8px 0 15px; color: var(--muted); }
+    .review-choice { display: grid; gap: 9px; margin-top: 16px; }
+    .review-select { width: 100%; margin: 8px 0 13px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); }
+    .review-select-list { display: grid; gap: 7px; max-height: 34vh; overflow: auto; margin: 8px 0 13px; }
+    .review-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    .review-fieldset legend { color: var(--ink); font-size: 13px; font-weight: 650; }
+    .review-item-option { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--card); cursor: pointer; }
+    .review-item-option:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
+    .review-item-option input { margin-top: 3px; accent-color: var(--green); }
+    .backup-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .backup-details > summary { padding: 7px 0; color: var(--green); cursor: pointer; font-size: 13px; font-weight: 650; }
+    .backup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .backup-actions .btn { flex: 1 1 150px; }
+    .trial-note { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .review-hidden { display: none; }
+    .history-details > summary { padding: 10px 0; color: var(--green); cursor: pointer; font-size: 13px; font-weight: 650; }
+    dialog { width: min(440px, calc(100% - 28px)); max-height: calc(100dvh - 32px); overflow-y: auto; border: 1px solid var(--line); border-radius: 22px; padding: 23px; color: var(--ink); background: var(--card); box-shadow: 0 20px 70px rgba(0,0,0,.2); }
+    dialog::backdrop { background: rgba(26, 35, 29, .38); }
+    .dialog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin: 18px 0; }
+    .dialog-grid .wide { grid-column: span 2; }
+    .dialog-actions { display: flex; justify-content: end; gap: 8px; }
+    .toast { position: fixed; z-index: 20; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); max-width: min(440px, calc(100vw - 36px)); padding: 12px 16px; border-radius: 14px; background: var(--toast-bg); color: var(--toast-ink); box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); transition: .2s ease; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    footer { margin-top: 20px; color: var(--muted); font-size: 11px; text-align: center; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .theme-toggle, .language-toggle { min-height: 40px; border-radius: 999px; background: var(--card); color: var(--ink); }
+    .language-toggle { min-width: 84px; }
+    .language-toggle .language-code { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--green-soft); color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .03em; }
+    .side-card:hover { box-shadow: 0 15px 38px rgba(45,55,46,.085); transform: translateY(-1px); }
+    .btn, .icon-button { transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(45,55,46,.08); }
+    .btn.primary { box-shadow: 0 5px 14px rgba(37,83,62,.16); }
+    body[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #e8eee9;
+      --muted: #a4b1a8;
+      --paper: #151a17;
+      --card: #1e2621;
+      --line: #354039;
+      --green: #91c6a5;
+      --on-green: #172c20;
+      --toast-bg: #e8eee9;
+      --toast-ink: #172c20;
+      --green-soft: #293b30;
+      --amber: #413a2a;
+      --red: #ed9d84;
+      --shadow: 0 14px 38px rgba(0,0,0,.22);
+      background: radial-gradient(ellipse at 50% -18%, #242d27 0, var(--paper) 68%);
+    }
+    body[data-theme="dark"] .mark { color: #17221b; }
+    body[data-theme="dark"] .block,
+    body[data-theme="dark"] .icon-button,
+    body[data-theme="dark"] .date-wrap input,
+    body[data-theme="dark"] .focus-field input,
+    body[data-theme="dark"] .field input,
+    body[data-theme="dark"] .field select,
+    body[data-theme="dark"] .review-select,
+    body[data-theme="dark"] .review-item-option,
+    body[data-theme="dark"] .history-week,
+    body[data-theme="dark"] .btn:not(.primary):not(.soft) { background: #242d27; color: var(--ink); }
+    body[data-theme="dark"] .evening-check { background: linear-gradient(145deg, #26362c, #222b25 78%); border-color: #394b3e; }
+    body[data-theme="dark"] .focus-field input.completed { background: #27312b; }
+    body[data-theme="dark"] .tag.fixed { color: #ead49a; }
+    body[data-theme="dark"] .sync-note { background: #252e28; }
+    body[data-theme="dark"] .week-row { border-color: #303a33; }
+    body[data-theme="dark"] .calendar-slot.hour { border-top-color: #4a594e; }
+    body[data-theme="dark"] .calendar-slot.drag-over { background: var(--green-soft); }
+    body[data-theme="dark"] dialog { background: var(--card); }
+    body[data-theme="dark"] dialog::backdrop { background: rgba(0,0,0,.62); }
+    body[data-theme="dark"] #conflicts { background: #3a2b25 !important; color: #f0b49b !important; }
+    @media (max-width: 780px) { .side-card { margin: 0; } }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 20px, 520px); padding-top: 17px; }
+      header { flex-wrap: wrap; margin-bottom: 16px; }
+      .header-actions { margin-left: auto; }
+      .header-actions { gap: 6px; }
+      .header-actions .btn { min-height: 40px; padding-inline: 10px; font-size: 12px; }
+      .main-card { padding: 20px 15px; border-radius: 20px; }
+      .side-column { display: block; }
+      .side-card { margin-bottom: 12px; }
+      .timeline { grid-template-columns: 42px minmax(0, 1fr); }
+      .week-board { min-width: 832px; }
+      .week-board.day-view { min-width: 0; }
+      .week-scroll { max-height: 68vh; }
+      .week-toolbar { flex-wrap: wrap; }
+      .week-label { flex: 1 1 100%; text-align: left; margin-left: 0; }
+      .calendar-hint { padding-left: 42px; }
+      .block { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 7px; padding: 8px 7px; width: calc(100% - 4px); margin-inline: 2px; }
+      .block-actions { gap: 4px; }
+      .icon-button { width: 34px; height: 34px; }
+      .evening-check { padding: 16px 14px; }
+      .side-card { border-radius: 19px; }
+      .btn { min-height: 44px; }
+      input, select { font-size: 16px; }
+      .controls .btn { flex: 1 1 145px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true">↗</div>
+        <div><p class="brand-name">Dagkompass</p><div class="brand-caption">Din plan, med plats för livet</div></div>
+      </div>
+      <div class="header-actions">
+        <button class="btn language-toggle" type="button" id="languageToggle" aria-label="Byt språk"><span class="language-code" id="languageCode" aria-hidden="true">EN</span><span id="languageLabel">English</span></button>
+        <button class="btn theme-toggle" type="button" id="themeToggle" aria-pressed="false" title="Byt färgläge"><span id="themeIcon" aria-hidden="true">☾</span><span id="themeLabel">Mörkt läge</span></button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <main class="main-card">
+        <div class="topline">
+          <div>
+            <h1>Dagkompass</h1>
+            <div class="trial-note" id="trialNote" aria-live="polite"></div>
+          </div>
+          <label class="date-wrap">Vald dag<input id="planDate" type="date"></label>
+        </div>
+
+        <section class="evening-check" aria-labelledby="eveningHeading">
+          <div class="eyebrow">Huvuduppgift</div>
+          <p>Skriv en sak du vill få klar. Bocka av när den är gjord.</p>
+          <label class="focus-field">Vad ska bli klart?<input id="dailyFocus" maxlength="120" placeholder="Till exempel: lösa uppgift 1–5 i linjär algebra"></label>
+          <label class="focus-done" id="focusDoneWrap"><input id="dailyFocusDone" type="checkbox"> Klar med huvuduppgiften</label>
+          <div class="buffer-note">Lämna cirka 45 min fri som buffert.</div>
+        </section>
+
+        <div class="section-head">
+          <div><h2 id="calendarHeading">Veckoschema</h2><div class="small-note" id="calendarSubheading">Dra block mellan dagar och tider</div></div>
+        </div>
+        <div id="conflicts" aria-live="polite" style="display:none; margin:0 0 12px; padding:11px 13px; border-radius:12px; background:#fff0e9; color:#874b39; font-size:12px"></div>
+        <div class="week-toolbar">
+          <button class="btn" id="prevWeek" type="button" aria-label="Föregående vecka">‹</button>
+          <button class="btn" id="todayWeek" type="button">Idag</button>
+          <button class="btn" id="nextWeek" type="button" aria-label="Nästa vecka">›</button>
+          <div class="view-switch" role="group" aria-label="Kalendervy"><button class="btn" id="dayViewButton" type="button">Dag</button><button class="btn active" id="weekViewButton" type="button">Vecka</button></div>
+          <div class="week-label" id="weekLabel"></div>
+        </div>
+        <div class="week-scroll" id="weekScroll"><div class="week-board" id="weekBoard"></div></div>
+        <div class="week-hint" id="calendarHint">På mobil kan du svepa sidledes mellan veckodagarna.</div>
+        <div class="controls">
+          <button class="btn" id="addBlock">＋ Lägg till block</button>
+          <button class="btn" id="starterButton">Fyll med grundmall</button>
+        </div>
+        <button class="btn primary approve" id="approveButton">Godkänn morgondagens plan</button>
+        <div class="approval-state" id="approvalState" aria-live="polite"></div>
+      </main>
+
+      <aside class="side-column">
+        <section class="side-card">
+          <div class="side-title"><h2>Dina ramar</h2><span class="eyebrow">Inställningar</span></div>
+          <div class="settings-grid">
+            <label class="field">Studietid per dag<input id="studyGoal" type="number" min="1" max="14" step="0.5" value="8"></label>
+            <label class="field">Veckans träningsmål<input id="workoutGoal" type="number" min="0" max="14" step="1" value="4"></label>
+            <label class="field">Liv Kol per vecka, timmar<input id="businessGoal" type="number" min="0" max="80" step="0.5" value="8"></label>
+            <label class="field">Vanlig starttid<input id="wakeTime" type="time" value="06:00"></label>
+          </div>
+          <div class="rule"></div>
+          <div class="small-note">Bönetider i Sundsvall · Fajr börjar kl. 06.00 varje dag</div>
+          <div class="sync-note" style="margin-top:11px"><strong>Bönetider hämtas automatiskt från islam.nu</strong><br><span id="prayerStatus" aria-live="polite">Hämtar Sundsvalls tider…</span><br><a href="https://islam.nu/bonetider/sundsvall/" target="_blank" rel="noopener">Visa källa</a></div>
+        </section>
+
+        <section class="side-card">
+          <details class="history-details"><summary>Veckomål och hur tiden räknas</summary>
+            <div class="week-row"><span>Föreläsningar och labbar</span><span>Räknas som plugg</span></div>
+            <div class="week-row"><span>Raster och bön</span><span>Utanför pluggtid</span></div>
+            <div class="week-row"><span>Liv Kol</span><span>8 h i veckan</span></div>
+            <div class="week-row"><span>Träning</span><span>4 pass i veckan</span></div>
+          </details>
+          <div class="rule"></div>
+          <div class="side-title"><h2>Veckohistorik</h2><span class="eyebrow">Sparad här</span></div>
+          <details class="history-details"><summary>Jämför veckor och se tidigare dagar</summary>
+            <div class="small-note">Sammanställs efter kvällsavstämningen.</div>
+            <div id="weeklyHistory" class="history-list" aria-live="polite"></div>
+          </details>
+          <button class="btn" id="reviewButton" type="button" style="width:100%;margin-top:12px">Gör kvällsavstämning</button>
+          <button class="btn soft" id="prepareTrialButton" type="button" style="width:100%;margin-top:8px">Förbered grundplanen · 14 dagar</button>
+          <details class="backup-details">
+            <summary>Säkerhetskopia</summary>
+            <div class="small-note">Spara planer och historik som en fil, eller återställ dem senare på mobilen.</div>
+            <div class="backup-actions">
+              <button class="btn" id="exportBackup" type="button">Spara kopia</button>
+              <button class="btn" id="importBackupButton" type="button">Återställ kopia</button>
+              <input id="importBackupFile" type="file" accept="application/json,.json" hidden>
+            </div>
+          </details>
+        </section>
+      </aside>
+    </div>
+    <footer>Efterföljande pass följer dina tidsändringar. Bönetider får överlappa.</footer>
+  </div>
+
+  <dialog id="blockDialog">
+    <form method="dialog" id="blockForm">
+      <div class="eyebrow">Planera ett block</div>
+      <h2 id="dialogHeading" style="margin-top:6px">Nytt block</h2>
+      <div class="dialog-grid">
+        <label class="field wide">Vad ska du göra?<input id="blockName" required maxlength="70" placeholder="Till exempel: plugga linjär algebra"></label>
+        <label class="field">Start<input id="blockStart" type="time" required></label>
+        <label class="field">Slut<input id="blockEnd" type="time" required></label>
+        <label class="field">Typ<select id="blockType"><option value="study">Plugg</option><option value="class">Föreläsning / labb</option><option value="workout">Träning</option><option value="business">Liv Kol</option><option value="prayer">Bön + paus</option><option value="break">Mat / paus</option><option value="other">Annat</option></select></label>
+        <label class="field event-color-field">Egen färg<input id="blockColor" type="color" value="#d8eadf"></label>
+        <div class="color-swatches" id="colorSwatches" role="group" aria-label="Färdiga färger"></div>
+      </div>
+      <div class="dialog-actions"><button class="btn" type="button" id="cancelBlock">Avbryt</button><button class="btn primary" id="saveBlock" value="default">Spara block</button></div>
+    </form>
+  </dialog>
+  <dialog id="reviewDialog">
+    <div class="eyebrow">Kvällsavstämning</div>
+    <h2 id="reviewHeading" style="margin-top:6px">Avsluta dagen</h2>
+    <p class="review-question" id="reviewQuestion">Blev dagens plan gjord?</p>
+    <div id="reviewStart" class="review-choice">
+      <button class="btn primary" id="reviewAllDone" type="button">Ja, allt blev gjort</button>
+      <button class="btn" id="reviewNotAll" type="button">Nej, något blev inte gjort</button>
+    </div>
+    <div id="reviewFollowup" class="review-hidden">
+      <fieldset class="review-fieldset"><legend>Vad blev inte gjort?</legend><div id="reviewUnfinished" class="review-select-list"></div></fieldset>
+      <p class="small-note" id="reviewMoveHint"></p>
+      <div class="review-choice" id="reviewMoveActions">
+        <button class="btn primary" id="reviewMoveTomorrow" type="button">Flytta valda till i morgon</button>
+        <button class="btn" id="reviewLeave" type="button">Spara valda i historiken</button>
+      </div>
+      <button class="btn review-hidden" id="reviewContinue" type="button" style="width:100%;margin-top:10px">Spara avstämning</button>
+    </div>
+    <div class="dialog-actions" style="margin-top:14px"><button class="btn" type="button" id="reviewClose">Stäng</button></div>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'dagkompass-v1';
+      const prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      const emptyState = { date: '', view: 'week', theme: 'light', language: 'sv', trialStart: '', settings: { studyGoal: 8, workoutGoal: 4, businessGoal: 8, wakeTime: '06:00' }, prayerCache: {}, prayerDone: {}, prayerOverrides: {}, prayerEvents: [], dailyFocus: {}, dailyFocusDone: {}, plans: {}, weekTemplates: {}, history: [], reviewPromptDismissed: {}, tasks: [], approved: false };
+      let state = loadState();
+      let editId = null;
+      let selectedMoveId = null;
+      let reviewDate = null;
+      let reviewItems = [];
+      const $ = (id) => document.getElementById(id);
+      const weekBoard = $('weekBoard');
+      let editDay = null;
+      let movingDay = null;
+      let resizeSession = null;
+      let colorManuallySet = false;
+      let storageWriteFailed = false;
+      const typeColors = {study:'#6f9d7b',class:'#6589b5',workout:'#d27d63',business:'#9875b5',prayer:'#b49a5a',break:'#c49b57',other:'#89938d'};
+      const presetColors = [
+        {color:'#6f9d7b',name:'Salviagrön'}, {color:'#a8bd78',name:'Limegrön'}, {color:'#5b9c91',name:'Turkos'},
+        {color:'#6589b5',name:'Blå'}, {color:'#8291c5',name:'Lavendelblå'}, {color:'#9875b5',name:'Lila'},
+        {color:'#c4779a',name:'Rosa'}, {color:'#d27d63',name:'Terrakotta'}, {color:'#d19b57',name:'Bärnsten'},
+        {color:'#b49a5a',name:'Oliv'}, {color:'#89938d',name:'Grågrön'}, {color:'#805d4d',name:'Brun'}
+      ];
+      const english = {
+        'Sparandet fungerar inte just nu. Spara en säkerhetskopia innan du stänger appen.':'Saving is unavailable. Export a backup before closing the app.',
+        'Isha får inte plats efter passen före midnatt. Justera kvällens tider.':'Isha cannot fit after the sessions before midnight. Adjust the evening schedule.',
+        'Alla pass får inte plats före midnatt. Välj en tidigare tid eller korta ett pass.':'The sessions will not all fit before midnight. Choose an earlier time or shorten a session.','Alla pass får inte plats efter 01:00. Välj en senare tid eller korta ett pass.':'The sessions will not all fit after 01:00. Choose a later time or shorten a session.','Efterföljande pass följer dina tidsändringar. Bönetider får överlappa.':'Following sessions follow your time changes. Prayer blocks may overlap.','Blocket sparades.':'Block saved.',
+        'Din plan, med plats för livet':'Your plan, with room for life','Byt färgläge':'Switch color theme','Mörkt läge':'Dark mode','Ljust läge':'Light mode','Byt språk':'Change language',
+        'Vald dag':'Selected day','Huvuduppgift':'Main focus','Skriv en sak du vill få klar. Bocka av när den är gjord.':'Choose one thing to finish. Check it off when it is done.',
+        'Vad ska bli klart?':'What do you want to finish?','Till exempel: lösa uppgift 1–5 i linjär algebra':'For example: solve problems 1–5 in linear algebra','Klar med huvuduppgiften':'Main focus complete','Lämna cirka 45 min fri som buffert.':'Leave about 45 minutes free as a buffer.',
+        'Veckoschema':'Week view','Dagschema':'Day view','Dra block mellan dagar och tider':'Drag blocks between days and times','Föregående vecka':'Previous week','Föregående dag':'Previous day','Nästa vecka':'Next week','Nästa dag':'Next day','Idag':'Today','Dag':'Day','Vecka':'Week','Kalendervy':'Calendar view','Tid':'Time','Dra för att ändra starttid':'Drag to change start time','Dra för att ändra sluttid':'Drag to change end time',
+        'Tryck på en tom tid för block · dra över- eller nederkanten för att ändra tid minutvis.':'Tap an empty time to add a block · drag the top or bottom edge to adjust the time by the minute.','Tryck på en tom tid för block · flytta och ändra längd minutvis.':'Tap an empty time to add a block · move or resize by the minute.','Dra överkanten för att ändra starttid, nederkanten för sluttid.':'Drag the top edge to change the start time, or the bottom edge to change the end time.','På mobil kan du svepa mellan dagarna och dra blockets kanter minutvis.':'On mobile, swipe between days and drag a block edge to adjust its time by the minute.',
+        '＋ Lägg till block':'＋ Add block','Lägg till block':'Add block','Fyll med grundmall':'Use day template','Godkänn morgondagens plan':'Approve tomorrow’s plan','Dina ramar':'Your preferences','Inställningar':'Settings','Studietid per dag':'Study hours per day','Veckans träningsmål':'Weekly workout goal','Liv Kol per vecka, timmar':'Liv Kol hours per week','Vanlig starttid':'Usual start time',
+        'Bönetider i Sundsvall · Fajr börjar kl. 06.00 varje dag':'Prayer times in Sundsvall · Fajr starts at 06:00 every day','Bönetider hämtas automatiskt från islam.nu':'Prayer times are fetched automatically from islam.nu','Hämtar Sundsvalls tider…':'Fetching Sundsvall prayer times…','Visa källa':'View source',
+        'Veckomål och hur tiden räknas':'Weekly goals and time tracking','Föreläsningar och labbar':'Lectures and labs','Räknas som plugg':'Count as study','Raster och bön':'Breaks and prayer','Utanför pluggtid':'Not counted as study','8 h i veckan':'8 hours a week','4 pass i veckan':'4 sessions a week','Träning':'Workout','Veckohistorik':'Weekly history','Sparad här':'Saved on this device','Jämför veckor och se tidigare dagar':'Compare weeks and review past days','Sammanställs efter kvällsavstämningen.':'Summarized after the evening check-in.','Gör kvällsavstämning':'Review today','Förbered grundplanen · 14 dagar':'Prepare 14-day plan','Säkerhetskopia':'Backup','Spara planer och historik som en fil, eller återställ dem senare på mobilen.':'Save your plans and history to a file, or restore them on your phone later.','Spara kopia':'Export backup','Återställ kopia':'Restore backup','Om något krockar får du välja vad som ska flyttas.':'If things conflict, you choose what to move.',
+        'Planera ett block':'Plan a block','Nytt block':'New block','Redigera block':'Edit block','Vad ska du göra?':'What are you working on?','Till exempel: plugga linjär algebra':'For example: study linear algebra','Start':'Start','Slut':'End','Typ':'Type','Plugg':'Study','Föreläsning / labb':'Lecture / lab','Träning':'Workout','Bön + paus':'Prayer + break','Mat / paus':'Meal / break','Annat':'Other','Egen färg':'Custom color','Färdiga färger':'Preset colors','Avbryt':'Cancel','Spara block':'Save block','Plan godkänd ✓':'Plan approved ✓',
+        'Kvällsavstämning':'Evening check-in','Avsluta dagen':'Wrap up your day','Blev dagens plan gjord?':'Did you complete today’s plan?','Ja, allt blev gjort':'Yes, everything is done','Nej, något blev inte gjort':'No, something is unfinished','Vad blev inte gjort?':'What did not get done?','Flytta valda till i morgon':'Move selected to tomorrow','Spara valda i historiken':'Save selected in history','Spara avstämning':'Save check-in','Stäng':'Close','Visa senaste avstämda dagar':'Show recent days','Avstämda dagar och veckosiffror visas här.':'Reviewed days and weekly totals will appear here.',
+        'Mjuk morgonstart':'Gentle morning start','Eget plugg · pass 1':'Independent study · session 1','Eget plugg · pass 2':'Independent study · session 2','Lunch och återhämtning':'Lunch and reset','Fajr · Gryningsbönen':'Fajr · Dawn prayer','Dhuhr · Middagsbönen':'Dhuhr · Midday prayer','Asr · Eftermiddagsbönen':'Asr · Afternoon prayer','Maghrib · Solnedgångsbönen':'Maghrib · Sunset prayer','Isha · Kvällsbönen':'Isha · Evening prayer',
+        'Salviagrön':'Sage','Limegrön':'Lime','Turkos':'Teal','Blå':'Blue','Lavendelblå':'Lavender','Lila':'Purple','Rosa':'Pink','Terrakotta':'Terracotta','Bärnsten':'Amber','Oliv':'Olive','Grågrön':'Gray green','Brun':'Brown',
+        'Undervisning':'Teaching','Säkerhetskopian laddades ner.':'Backup downloaded.','Återställa säkerhetskopian? Den ersätter Dagkompass-data i den här webbläsaren.':'Restore this backup? It will replace Dagkompass data in this browser.','Filen känns inte igen som en Dagkompass-säkerhetskopia.':'This file is not a recognized Dagkompass backup.','Filen gick inte att läsa.':'The file could not be read.',
+        'Ingen veckomall finns ännu. Godkänn först ett dagsupplägg för varje veckodag du vill återanvända.':'No weekly templates yet. Approve a day plan for each weekday you want to reuse.','Alla dagutkast fanns redan. Inget skrevs över.':'All day drafts already existed. Nothing was overwritten.','Blocket ändrat till':'Block updated to','Välj en tid i kalendern för att flytta blocket.':'Choose a time on the calendar to move this block.','Tiden krockar med en annan uppgift. Välj tider som inte krockar.':'That time overlaps another task. Choose a time without a conflict.','Blocket måste rymmas mellan 01:00 och midnatt.':'The block must fit between 01:00 and midnight.','Två uppgifter kan inte ligga samtidigt. Välj en ledig tid.':'Two tasks cannot overlap. Choose an available time.','Bönetiderna för måldagen har inte laddats ännu.':'Prayer times for the selected day have not loaded yet.','Det blocket kunde inte hittas i dagens plan.':'That block could not be found in the day plan.','Den dagen finns redan i historiken.':'That day is already in your history.','Markera det som inte blev gjort.':'Select what did not get done.','Välj det som inte blev gjort.':'Select what did not get done.','Jag hittar inga block eller någon huvuduppgift för dagen. Du kan spara dagen i historiken.':'I cannot find any blocks or a main focus for this day. You can save the day to your history.','Jag hittar inga sparade block för':'No saved blocks found for','i Dagkompass. Kalenderkoppling är inte aktiv ännu.':'in Dagkompass. Calendar sync is not connected yet.','Blev dagens plan gjord?':'Did you complete today’s plan?','Morgondagen har redan en huvuduppgift.':'Tomorrow already has a main focus.','Jag hittar ingen ledig tid i morgondagens plan. Blocket ligger kvar i historiken så att du kan välja en tid själv.':'I cannot find a free time in tomorrow’s plan. The block stays in your history so you can choose a time yourself.','Morgondagens plan saknas ännu.':'Tomorrow’s plan is not ready yet.','Första planen för veckodagen saknas ännu.':'There is no template for this weekday yet.','Morgondagens utkast är klart.':'Tomorrow’s draft is ready.','Grundmallen är inlagd. Justera tiderna så de passar.':'The day template is in place. Adjust the times to suit you.','Planen är godkänd och sparad som mall för veckodagen.':'Plan approved and saved as a template for this weekday.','Ersätta blocken som redan finns med grundmallen?':'Replace the existing blocks with the day template?','Sluttiden behöver vara efter starttiden.':'The end time must be later than the start time.','Tidskrockar:':'Schedule conflicts:','Flytta ett flexibelt block eller redigera tiderna.':'Move a flexible block or edit its time.','Visar sparade tider medan veckans tabell uppdateras…':'Showing saved times while this week’s times update…','Hämtar veckans tider…':'Fetching this week’s prayer times…','Uppdaterat för veckan · källa: islam.nu':'Updated for this week · source: islam.nu','Kunde inte hämta dagens bönetider just nu.':'Could not fetch today’s prayer times.','Visar senast hämtade tider. Kunde inte uppdatera just nu.':'Showing the latest saved times. Could not update just now.','Kunde inte hämta tiderna just nu. Kontrollera nätet eller öppna islam.nu.':'Could not fetch prayer times. Check your connection or open islam.nu.','Dagen sparades. Morgondagens utkast är klart.':'The day was saved. Tomorrow’s draft is ready.','Dagen sparades. Första planen för veckodagen saknas ännu.':'The day was saved. There is no template for this weekday yet.','Ett dagutkast skapades från veckomallen.':'A day draft was created from the weekly template.','dagutkast skapade från veckomallarna':'day drafts created from weekly templates','dagar saknar ännu en mall':'days still need a template','befintliga dagar lämnades orörda':'existing days were left unchanged','Dagen sparades och':'The day was saved and','sak flyttades till morgondagen.':'item was moved to tomorrow.','saker flyttades till morgondagen.':'items were moved to tomorrow.','Välj en starttid.':'Choose a start time.','Välj en sluttid.':'Choose an end time.'
+      };
+      const originalText = new WeakMap(), originalAttributes = new WeakMap();
+
+      function translateText(value) {
+        if(state.language!=='en')return value;
+        const trimmed=value.trim();
+        if(english[trimmed])return value.replace(trimmed,english[trimmed]);
+        let match;
+        if((match=trimmed.match(/^Tvåveckorstest · startar (.+) kl\. (.+)\.$/)))return value.replace(trimmed,`Two-week trial · starts ${match[1]} at ${match[2]}.`);
+        if((match=trimmed.match(/^Tvåveckorstest · dag (\d+) av 14 · till (.+)\.$/)))return value.replace(trimmed,`Two-week trial · day ${match[1]} of 14 · through ${match[2]}.`);
+        if((match=trimmed.match(/^Godkänd för (.+)\.$/)))return value.replace(trimmed,`Approved for ${match[1]}.`);
+        if((match=trimmed.match(/^Godkänn plan för (.+)$/)))return value.replace(trimmed,`Approve plan for ${match[1]}`);
+        if((match=trimmed.match(/^Avstämning · (.+)$/)))return value.replace(trimmed,`Check-in · ${match[1]}`);
+        if((match=trimmed.match(/^Tidskrock(ar?): (.+)\. Flytta ett flexibelt block eller redigera tiderna\.$/)))return value.replace(trimmed,`Schedule conflict${match[1]}: ${match[2]}. Move or edit one of the tasks.`);
+        if((match=trimmed.match(/^Blocket ändrat till (.+)\.$/)))return value.replace(trimmed,`Block updated to ${match[1]}.`);
+        if((match=trimmed.match(/^Blocket flyttades till (.+)\.$/)))return value.replace(trimmed,`Block moved to ${match[1]}.`);
+        if((match=trimmed.match(/^Blocket flyttades\. Isha flyttades till (.+)\.$/)))return value.replace(trimmed,`Block moved. Isha moved to ${match[1]}.`);
+        if((match=trimmed.match(/^Huvuduppgift: (.+)$/)))return value.replace(trimmed,`Main focus: ${match[1]}`);
+        if((match=trimmed.match(/^(.+) · (\d{2}:\d{2})–(\d{2}:\d{2})$/)))return value.replace(trimmed,`${english[match[1]]||match[1]} · ${match[2]}–${match[3]}`);
+        if((match=trimmed.match(/^([A-Z][a-z]+) · .+ · (\d{2}:\d{2})–(\d{2}:\d{2})$/))&&english[`${match[1]} · ${match[1]==='Fajr'?'Gryningsbönen':match[1]==='Dhuhr'?'Middagsbönen':match[1]==='Asr'?'Eftermiddagsbönen':match[1]==='Maghrib'?'Solnedgångsbönen':'Kvällsbönen'}`])return value.replace(trimmed,`${match[1]} · ${match[2]}–${match[3]}`);
+        return value;
+      }
+      function applyLanguage(root=document.body) {
+        const englishMode=state.language==='en';
+        document.documentElement.lang=englishMode?'en':'sv';
+        const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+        let node;
+        while((node=walker.nextNode())) {
+          if(!originalText.has(node))originalText.set(node,node.nodeValue);
+          node.nodeValue=translateText(originalText.get(node));
+        }
+        const attrs=['title','aria-label','placeholder'];
+        root.querySelectorAll?.('*').forEach(element=>{
+          let saved=originalAttributes.get(element);if(!saved){saved={};originalAttributes.set(element,saved);}
+          for(const attr of attrs)if(element.hasAttribute(attr)){
+            if(!(attr in saved))saved[attr]=element.getAttribute(attr);
+            element.setAttribute(attr,translateText(saved[attr]));
+          }
+        });
+        if($('languageLabel')){$('languageLabel').textContent=englishMode?'Svenska':'English';$('languageCode').textContent=englishMode?'SV':'EN';}
+        $('languageToggle')?.setAttribute('aria-label',englishMode?'Switch to Swedish':'Byt till engelska');
+      }
+
+      function applyTheme() {
+        const dark=state.theme==='dark';
+        document.body.dataset.theme=dark?'dark':'light';
+        $('themeToggle').setAttribute('aria-pressed',String(dark));
+        $('themeIcon').textContent=dark?'☀':'☾';
+        $('themeLabel').textContent=dark?(state.language==='en'?'Light mode':'Ljust läge'):(state.language==='en'?'Dark mode':'Mörkt läge');
+        document.querySelector('meta[name="theme-color"]').content=dark?'#151a17':'#f5f2eb';
+        applyLanguage();
+      }
+
+      function loadState() {
+        try {
+          const stored=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+          const loaded={...emptyState,...stored};
+          loaded.settings={...emptyState.settings,...(stored?.settings&&typeof stored.settings==='object'&&!Array.isArray(stored.settings)?stored.settings:{})};
+          loaded.theme=loaded.theme==='dark'?'dark':'light';
+          loaded.language=loaded.language==='en'?'en':'sv';
+          loaded.view=loaded.view==='day'?'day':'week';
+          loaded.plans=loaded.plans||{};
+          loaded.weekTemplates=loaded.weekTemplates||{};
+          loaded.history=loaded.history||[];
+          loaded.reviewPromptDismissed=loaded.reviewPromptDismissed||{};
+          loaded.trialStart=loaded.trialStart||'';
+          if(loaded.date&&!loaded.plans[loaded.date]&&Array.isArray(loaded.tasks)&&loaded.tasks.length)loaded.plans[loaded.date]={tasks:loaded.tasks,approved:!!loaded.approved};
+          return loaded;
+        }
+        catch { return { ...emptyState }; }
+      }
+      function saveState() {
+        if(state.date){state.plans=state.plans||{};state.plans[state.date]={...state.plans[state.date],tasks:state.tasks||[],approved:!!state.approved};}
+        try{localStorage.setItem(STORAGE_KEY, JSON.stringify(state));storageWriteFailed=false;return true;}
+        catch{storageWriteFailed=true;showToast('Sparandet fungerar inte just nu. Spara en säkerhetskopia innan du stänger appen.');return false;}
+      }
+      function applyFajrAndMorningMigration() {
+        const keepTask=task=>!/mjuk\s*(morgon)?\s*start/i.test(task.name||'');
+        for(const plan of Object.values(state.plans||{})) if(Array.isArray(plan.tasks)) plan.tasks=plan.tasks.filter(keepTask);
+        if(Array.isArray(state.tasks)) state.tasks=state.tasks.filter(keepTask);
+        for(const [weekday,template] of Object.entries(state.weekTemplates||{})) {
+          if(Array.isArray(template)) state.weekTemplates[weekday]=template.filter(keepTask);
+        }
+        for(const events of Object.values(state.prayerCache||{})) for(const event of events||[]) {
+          if(event.name?.startsWith('Fajr')) { event.start='06:00'; event.end='06:50'; event.sourceStart='06:00'; }
+        }
+        for(const event of state.prayerEvents||[]) {
+          if(event.name?.startsWith('Fajr')) { event.start='06:00'; event.end='06:50'; event.sourceStart='06:00'; }
+        }
+      }
+      function dateKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
+      function tomorrowKey() { const d = new Date(); d.setDate(d.getDate()+1); return dateKey(d); }
+      function offsetDate(day,amount) { const d=new Date(day+'T12:00:00');d.setDate(d.getDate()+amount);return dateKey(d); }
+      function weekStart(day) { const d=new Date(day+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return dateKey(d); }
+      function weekdayKey(day) { return String(new Date(day+'T12:00:00').getDay()); }
+      function defaultDayTasks(day) {
+        const weekday=Number(weekdayKey(day)),tasks=[];
+        let cursor=410;
+        const add=(key,name,type,length)=>{if(length<=0)return;tasks.push({id:`${day}-${key}`,name,type,start:timeFromMinutes(cursor),end:timeFromMinutes(cursor+length),fixed:false,done:false});cursor+=length;};
+        const workoutDays=[1,3,5,6,2,4,0].slice(0,Math.min(7,Math.max(0,Math.floor(state.settings.workoutGoal))));
+        if(workoutDays.includes(weekday)){add('workout','Träning','workout',90);cursor+=10;}else cursor=420;
+        const study=Math.round(Math.max(1,state.settings.studyGoal)*60),first=Math.ceil(study/2);
+        add('study-am','Eget plugg · pass 1','study',first);
+        add('lunch','Lunch och återhämtning','break',45);
+        add('study-pm','Eget plugg · pass 2','study',study-first);
+        cursor+=45;
+        const businessIndex=[2,4,6,0].indexOf(weekday),business=Math.round(Math.max(0,state.settings.businessGoal)*60);
+        if(businessIndex>=0)add('business','Liv Kol','business',Math.floor(business/4)+(businessIndex<business%4?1:0));
+        return cursor<=1440?tasks:[];
+      }
+      function createTemplateDraft(day) {
+        const key=weekdayKey(day), template=state.weekTemplates?.[key]?.length?state.weekTemplates[key]:defaultDayTasks(day);
+        if(!template?.length)return null;
+        const tasks=template.map((task,index)=>({...task,id:`${day}-template-${index}`,done:false}));
+        state.plans=state.plans||{};state.plans[day]={tasks,approved:false,fromTemplate:true};
+        return state.plans[day];
+      }
+      function prepareTrialDrafts() {
+        let created=0,kept=0,missing=0;
+        for(let offset=0;offset<14;offset++){
+          const day=offsetDate(state.trialStart,offset),existing=state.plans?.[day];
+          if(existing?.tasks?.length||existing?.explicitEmpty){kept++;continue;}
+          if(createTemplateDraft(day))created++;else missing++;
+        }
+        activatePlan(state.date);saveState();render();
+        if(!created)showToast(missing?(state.language==='en'?`${missing} days could not be planned within the day. Review your time goals.`:`${missing} dagar kunde inte planeras inom dagen. Se över dina tidsmål.`):'Alla dagutkast fanns redan. Inget skrevs över.');
+        else if(state.language==='en')showToast(`${created} day drafts prepared${missing?`. ${missing} days do not fit within the day`:''}${kept?`. ${kept} existing days were left unchanged`:''}.`);
+        else showToast(`${created} dagutkast förberedda${missing?`. ${missing} dagar ryms inte inom dagen`:''}${kept?`. ${kept} befintliga dagar lämnades orörda`:''}.`);
+      }
+      function rememberWeekTemplate(day,tasks) {
+        if(!tasks?.length)return;
+        state.weekTemplates=state.weekTemplates||{};
+        state.weekTemplates[weekdayKey(day)]=tasks.filter(task=>!String(task.id).startsWith('carry-')).map(({id,...task})=>({...task,done:false}));
+      }
+      function activatePlan(day) {
+        let plan=state.plans?.[day];
+        if(!plan&&state.weekTemplates?.[weekdayKey(day)]?.length)plan=createTemplateDraft(day);
+        state.tasks=Array.isArray(plan?.tasks)?plan.tasks:[];state.approved=!!plan?.approved;
+      }
+      function minutes(time) { if (!time) return null; const [h,m] = time.split(':').map(Number); return h*60+m; }
+      function durationHours(task) { const a=minutes(task.start), b=minutes(task.end); if (a===null||b===null) return 0; return Math.max(0,(b-a)/60); }
+      function sortTasks() { state.tasks.sort((a,b) => (a.start||'').localeCompare(b.start||'')); }
+      function allTasks() { return [...state.tasks, ...(state.prayerEvents||[])].sort((a,b)=>(a.start||'').localeCompare(b.start||'')); }
+      function applyPrayerDone(events, day) {
+        const saved=state.prayerDone?.[day]||{}, overrides=state.prayerOverrides?.[day]||{};
+        const source=events.some(event=>event.name.startsWith('Fajr'))?events:[{id:`prayer-${day}-fajr`,name:'Fajr · Gryningsbönen',start:'06:00',end:'06:50',sourceStart:'06:00',type:'prayer',fixed:false},...events];
+        return source.map(event=>{
+          const isIsha=event.name.startsWith('Isha'), override=overrides[isIsha?'isha':event.id];
+          return {...event,...(override||{}),sourceStart:event.sourceStart||event.start,fixed:false,done:!!saved[event.id]};
+        });
+      }
+      function safe(text) { const el=document.createElement('span'); el.textContent=text; return el.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+      function displayDate(date) { return new Intl.DateTimeFormat(state.language==='en'?'en-GB':'sv-SE',{weekday:'long',day:'numeric',month:'long'}).format(new Date(date+'T12:00:00')); }
+      function updateTrialNote() {
+        const start=state.trialStart||dateKey(new Date()),end=offsetDate(start,13),today=dateKey(new Date());
+        const elapsed=Math.floor((new Date(today+'T12:00:00')-new Date(start+'T12:00:00'))/86400000);
+        const day=Math.max(1,Math.min(14,elapsed+1));
+        $('trialNote').textContent=state.language==='en'?(elapsed<0?`Two-week trial · starts ${displayDate(start)} at ${state.settings.wakeTime||'06:00'}.`:today<=end?`Two-week trial · day ${day} of 14 · through ${displayDate(end)}.`:'The two-week trial is complete. Your history is saved.'):(elapsed<0?`Tvåveckorstest · startar ${displayDate(start)} kl. ${state.settings.wakeTime||'06:00'}.`:today<=end?`Tvåveckorstest · dag ${day} av 14 · till ${displayDate(end)}.`:`Tvåveckorstestet är klart. Din historik finns kvar.`);
+      }
+      function exportBackup() {
+        saveState();
+        const payload={app:'Dagkompass',version:1,exportedAt:new Date().toISOString(),data:state};
+        const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+        const url=URL.createObjectURL(blob),link=document.createElement('a');
+        link.href=url;link.download=`dagkompass-backup-${dateKey(new Date())}.json`;
+        document.body.appendChild(link);link.click();link.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+        showToast('Säkerhetskopian laddades ner.');
+      }
+      function validBackupData(data) {
+        const object=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
+        const date=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&dateKey(new Date(value+'T12:00:00'))===value;
+        const time=value=>typeof value==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/.test(value);
+        const task=(value,requireId=true)=>object(value)&&(!requireId||typeof value.id==='string')&&typeof value.name==='string'&&['study','class','workout','business','prayer','break','other'].includes(value.type)&&time(value.start)&&time(value.end)&&minutes(value.start)<minutes(value.end);
+        const taskList=(list,requireId=true)=>Array.isArray(list)&&list.every(value=>task(value,requireId));
+        if(!object(data)||!object(data.plans)||!Array.isArray(data.history)||!object(data.settings))return false;
+        if(data.date&&!date(data.date)||data.trialStart&&!date(data.trialStart))return false;
+        for(const key of ['studyGoal','workoutGoal','businessGoal'])if(data.settings[key]!==undefined&&(!Number.isFinite(data.settings[key])||data.settings[key]<0))return false;
+        if(data.settings.wakeTime!==undefined&&!time(data.settings.wakeTime))return false;
+        if(!Object.entries(data.plans).every(([day,plan])=>date(day)&&object(plan)&&taskList(plan.tasks)))return false;
+        if(data.tasks!==undefined&&!taskList(data.tasks))return false;
+        if(data.weekTemplates!==undefined&&(!object(data.weekTemplates)||!Object.values(data.weekTemplates).every(list=>taskList(list,false))))return false;
+        if(!data.history.every(entry=>object(entry)&&date(entry.date)&&(!entry.tasks||taskList(entry.tasks))&&['studyPlanned','studyDone','workoutsDone','businessDone'].every(key=>entry[key]===undefined||Number.isFinite(entry[key])&&entry[key]>=0)))return false;
+        for(const key of ['dailyFocus','dailyFocusDone','reviewPromptDismissed'])if(data[key]!==undefined&&(!object(data[key])||!Object.entries(data[key]).every(([day,value])=>date(day)&&typeof value===(key==='dailyFocus'?'string':'boolean'))))return false;
+        if(data.prayerCache!==undefined&&(!object(data.prayerCache)||!Object.entries(data.prayerCache).every(([day,list])=>date(day)&&taskList(list))))return false;
+        if(data.prayerEvents!==undefined&&!taskList(data.prayerEvents))return false;
+        if(data.prayerOverrides!==undefined&&(!object(data.prayerOverrides)||!Object.entries(data.prayerOverrides).every(([day,overrides])=>date(day)&&object(overrides)&&Object.values(overrides).every(value=>object(value)&&time(value.start)&&time(value.end)&&minutes(value.start)<minutes(value.end)))))return false;
+        return true;
+      }
+      function importBackup(file) {
+        const reader=new FileReader();
+        reader.onload=()=>{
+          try {
+            const payload=JSON.parse(reader.result),data=payload?.data;
+            if(payload?.app!=='Dagkompass'||payload?.version!==1||!validBackupData(data))throw new Error('invalid backup');
+            if(!confirm(translateText('Återställa säkerhetskopian? Den ersätter Dagkompass-data i den här webbläsaren.')))return;
+            try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...emptyState,...data,settings:{...emptyState.settings,...data.settings}}));}
+            catch{showToast('Sparandet fungerar inte just nu. Spara en säkerhetskopia innan du stänger appen.');return;}
+            location.reload();
+          } catch {
+            showToast('Filen känns inte igen som en Dagkompass-säkerhetskopia.');
+          }
+        };
+        reader.onerror=()=>showToast('Filen gick inte att läsa.');
+        reader.readAsText(file);
+      }
+      function setDefaultDate() { if (!state.date) state.date = tomorrowKey(); $('planDate').value = state.date; }
+      function kindName(type) { return state.language==='en'?({study:'Study',class:'Lecture / lab',workout:'Workout',business:'Liv Kol',prayer:'Prayer + break',break:'Meal / break',other:'Other'})[type]||'Other':({study:'Plugg',class:'Undervisning',workout:'Träning',business:'Liv Kol',prayer:'Bön + paus',break:'Mat / paus',other:'Annat'})[type]||'Annat'; }
+      function colorForTask(task) { return /^#[0-9a-f]{6}$/i.test(task.color||'')?task.color:typeColors[task.type]||typeColors.other; }
+      function renderColorSwatches(selected) {
+        $('colorSwatches').innerHTML=presetColors.map(({color,name})=>`<button type="button" class="color-swatch" style="--swatch:${color}" data-color="${color}" title="${name}" aria-label="${name}" aria-pressed="${color.toLowerCase()===selected.toLowerCase()}"></button>`).join('');
+      }
+      function daysInWeek(day) { const first=weekStart(day); return Array.from({length:7},(_,index)=>offsetDate(first,index)); }
+      function weekdayLabel(day) { return new Intl.DateTimeFormat(state.language==='en'?'en-GB':'sv-SE',{weekday:'short'}).format(new Date(day+'T12:00:00')); }
+      function weekLabel(days) { const locale=state.language==='en'?'en-GB':'sv-SE';return `${new Intl.DateTimeFormat(locale,{day:'numeric',month:'short'}).format(new Date(days[0]+'T12:00:00'))} – ${new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',year:'numeric'}).format(new Date(days[6]+'T12:00:00'))}`; }
+      function calendarItems(day) {
+        let tasks=day===state.date?state.tasks:state.plans?.[day]?.tasks;
+        if(!Array.isArray(tasks)) {
+          tasks=planTasksForDay(day);
+        }
+        const prayers=day===state.date&&state.prayerEvents.length?state.prayerEvents:applyPrayerDone(state.prayerCache?.[day]||[],day);
+        return [...tasks,...prayers].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+      }
+      function renderWeekCalendar() {
+        const days=state.view==='day'?[state.date]:daysInWeek(state.date);
+        $('weekLabel').textContent=state.view==='day'?new Intl.DateTimeFormat(state.language==='en'?'en-GB':'sv-SE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(state.date+'T12:00:00')):weekLabel(days);
+        weekBoard.classList.toggle('day-view',state.view==='day');
+        $('calendarHeading').textContent=state.language==='en'?(state.view==='day'?'Day view':'Week view'):(state.view==='day'?'Dagschema':'Veckoschema');
+        $('calendarSubheading').textContent=state.language==='en'?(state.view==='day'?'Tap an empty time to add a block · drag the top or bottom edge to adjust its time by the minute.':'Tap an empty time to add a block · move or resize by the minute.'):(state.view==='day'?'Tryck på en tom tid för block · dra över- eller nederkanten för att ändra tid minutvis.':'Tryck på en tom tid för block · flytta och ändra längd minutvis.');
+        $('calendarHint').textContent=state.language==='en'?(state.view==='day'?'Drag the top edge to change the start time, or the bottom edge to change the end time.':'On mobile, swipe between days and drag a block edge to adjust its time by the minute.'):(state.view==='day'?'Dra överkanten för att ändra starttid, nederkanten för sluttid.':'På mobil kan du svepa mellan dagarna och dra blockets kanter minutvis.');
+        $('prevWeek').setAttribute('aria-label',state.language==='en'?(state.view==='day'?'Previous day':'Previous week'):(state.view==='day'?'Föregående dag':'Föregående vecka'));
+        $('nextWeek').setAttribute('aria-label',state.language==='en'?(state.view==='day'?'Next day':'Next week'):(state.view==='day'?'Nästa dag':'Nästa vecka'));
+        $('dayViewButton').classList.toggle('active',state.view==='day');
+        $('weekViewButton').classList.toggle('active',state.view!=='day');
+        $('dayViewButton').setAttribute('aria-pressed',String(state.view==='day'));
+        $('weekViewButton').setAttribute('aria-pressed',String(state.view!=='day'));
+        const headers=days.map((day,index)=>`<button type="button" class="week-day-head ${day===state.date?'selected':''}" data-select-day="${day}" style="grid-column:${index+2};grid-row:1"><strong>${safe(weekdayLabel(day))}</strong><span>${day.slice(8,10)}</span></button>`).join('');
+        const hourLabels=Array.from({length:23},(_,index)=>`<div class="week-hour">${String(index+1).padStart(2,'0')}:00</div>`).join('');
+        const columns=days.map((day,index)=>{
+          const items=calendarItems(day).filter(item=>minutes(item.start)<1440&&minutes(item.end)>60);
+          const lanes=new Map(),taskItems=items.filter(item=>item.type!=='prayer');
+          for(let i=0;i<taskItems.length;) {
+            const group=[taskItems[i]];let end=minutes(taskItems[i].end),j=i+1;
+            while(j<taskItems.length&&minutes(taskItems[j].start)<end){group.push(taskItems[j]);end=Math.max(end,minutes(taskItems[j].end));j++;}
+            if(group.length>1){const laneEnds=[];const assigned=group.map(item=>{let lane=laneEnds.findIndex(value=>value<=minutes(item.start));if(lane<0)lane=laneEnds.length;laneEnds[lane]=minutes(item.end);return {item,lane};});assigned.forEach(({item,lane})=>lanes.set(item.id,{lane,count:laneEnds.length}));}
+            i=j;
+          }
+          const events=items.map(item=>{
+            const start=Math.max(60,minutes(item.start)),end=Math.min(1440,minutes(item.end)),duration=Math.max(0,end-start),lane=item.type==='prayer'?null:lanes.get(item.id);
+            const width=lane?`width:calc(100% / ${lane.count} - 4px);left:calc(${lane.lane} * 100% / ${lane.count} + 2px);`:'';
+            const prayer=item.type==='prayer',shortName=prayer?item.name.split(' · ')[0]:item.name;
+            const visibleEnd=item.end==='24:00'?'00:00':item.end;
+            return `<button type="button" class="week-event ${duration<22?'short':''} ${prayer?'prayer-event':''} ${selectedMoveId===item.id&&movingDay===day?'move-selected':''}" draggable="true" data-event-id="${safe(item.id)}" data-event-day="${day}" title="${safe(item.name)} · ${safe(item.start)}–${safe(item.end)}" style="top:${start-60}px;height:${duration}px;${width}--event-color:${colorForTask(item)}"><span class="week-event-resize top" data-resize-edge="top" aria-label="Dra för att ändra starttid" title="Dra för att ändra starttid"></span><span class="week-event-time">${safe(item.start)}</span><span class="week-event-title">${safe(shortName)}</span><span class="week-event-end">${safe(visibleEnd)}</span><span class="week-event-resize bottom" data-resize-edge="bottom" aria-label="Dra för att ändra sluttid" title="Dra för att ändra sluttid"></span></button>`;
+          }).join('');
+          return `<div class="week-day-body ${day===state.date?'selected':''}" data-drop-day="${day}" style="grid-column:${index+2};grid-row:2">${events}</div>`;
+        }).join('');
+        weekBoard.innerHTML=`<div class="week-corner" style="grid-column:1;grid-row:1">${state.language==='en'?'Time':'Tid'}</div>${headers}<div class="week-time-column" style="grid-column:1;grid-row:2">${hourLabels}</div>${columns}`;
+        weekBoard.querySelectorAll('[data-select-day]').forEach(button=>button.addEventListener('click',()=>selectPlanDate(button.dataset.selectDay)));
+        weekBoard.querySelectorAll('.week-event').forEach(eventBlock=>{
+          eventBlock.addEventListener('click',event=>{
+            if(event.target.closest('.week-event-resize'))return;
+            const day=eventBlock.dataset.eventDay,id=eventBlock.dataset.eventId;
+            if(selectedMoveId===id&&movingDay===day){
+              const item=calendarItems(day).find(value=>value.id===id);
+              selectedMoveId=null;movingDay=null;
+              if(item&&item.type!=='prayer')openDialog(item,day);else renderWeekCalendar();
+            } else {selectedMoveId=id;movingDay=day;weekBoard.querySelectorAll('.week-event').forEach(node=>node.classList.toggle('move-selected',node===eventBlock));showToast('Välj en tid i kalendern för att flytta blocket.');}
+          });
+          eventBlock.addEventListener('dragstart',event=>{event.dataTransfer.setData('text/plain',JSON.stringify({id:eventBlock.dataset.eventId,day:eventBlock.dataset.eventDay}));event.dataTransfer.effectAllowed='move';eventBlock.classList.add('dragging');});
+          eventBlock.addEventListener('dragend',()=>eventBlock.classList.remove('dragging'));
+          eventBlock.querySelectorAll('.week-event-resize').forEach(handle=>handle.addEventListener('pointerdown',event=>{
+            event.preventDefault();event.stopPropagation();
+            const day=eventBlock.dataset.eventDay,id=eventBlock.dataset.eventId,item=calendarItems(day).find(value=>value.id===id);
+            if(!item)return;
+            resizeSession={element:eventBlock,day,id,pointerId:event.pointerId,edge:handle.dataset.resizeEdge,start:item.start,end:item.end,startMinute:minutes(item.start),endMinute:minutes(item.end)};
+            eventBlock.setPointerCapture(event.pointerId);
+          }));
+          eventBlock.addEventListener('pointermove',event=>{
+            if(!resizeSession||resizeSession.element!==eventBlock||resizeSession.pointerId!==event.pointerId)return;
+            const rect=eventBlock.parentElement.getBoundingClientRect(),raw=60+(event.clientY-rect.top),snapped=Math.round(raw);
+            if(resizeSession.edge==='top') resizeSession.startMinute=Math.max(60,Math.min(resizeSession.endMinute-1,snapped));
+            else resizeSession.endMinute=Math.max(resizeSession.startMinute+1,Math.min(1440,snapped));
+            eventBlock.style.top=`${resizeSession.startMinute-60}px`;
+            eventBlock.style.height=`${resizeSession.endMinute-resizeSession.startMinute}px`;
+            eventBlock.querySelector('.week-event-time').textContent=timeFromMinutes(resizeSession.startMinute);
+            eventBlock.querySelector('.week-event-end').textContent=resizeSession.endMinute===1440?'00:00':timeFromMinutes(resizeSession.endMinute);
+          });
+          eventBlock.addEventListener('pointerup',event=>{
+            if(resizeSession?.element!==eventBlock||resizeSession.pointerId!==event.pointerId)return;
+            finishResize(resizeSession);resizeSession=null;
+          });
+          eventBlock.addEventListener('pointercancel',event=>{
+            if(resizeSession?.element!==eventBlock||resizeSession.pointerId!==event.pointerId)return;
+            resizeSession=null;renderWeekCalendar();
+          });
+        });
+        weekBoard.querySelectorAll('[data-drop-day]').forEach(column=>{
+          column.addEventListener('dragover',event=>{event.preventDefault();column.classList.add('drag-over');event.dataTransfer.dropEffect='move';});
+          column.addEventListener('dragleave',()=>column.classList.remove('drag-over'));
+          column.addEventListener('drop',event=>{event.preventDefault();column.classList.remove('drag-over');const source=parseDragData(event.dataTransfer.getData('text/plain'));const start=calendarTimeAt(column,event.clientY);if(source)moveWeekEvent(source.id,source.day,column.dataset.dropDay,start);});
+          column.addEventListener('click',event=>{
+            if(event.target.closest('.week-event'))return;
+            const start=calendarTimeAt(column,event.clientY),day=column.dataset.dropDay;
+            if(selectedMoveId) moveWeekEvent(selectedMoveId,movingDay||state.date,day,start);
+            else openDialog(null,day,start);
+          });
+        });
+        applyLanguage(weekBoard);
+      }
+      function parseDragData(value) { try{return JSON.parse(value);}catch{return value?{id:value,day:state.date}:null;} }
+      function calendarTimeAt(column,clientY) { const rect=column.getBoundingClientRect(),minute=Math.max(60,Math.min(1425,60+Math.round(clientY-rect.top)));return `${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`; }
+      function ensurePlanDay(day) {
+        if(day===state.date)return state.tasks;
+        if(!state.plans?.[day])createTemplateDraft(day);
+        state.plans=state.plans||{};state.plans[day]=state.plans[day]||{tasks:[],approved:false};
+        return state.plans[day].tasks||[];
+      }
+      function selectPlanDate(day) {
+        if(day===state.date)return;
+        saveState();state.date=day;activatePlan(day);$('planDate').value=day;
+        state.prayerEvents=applyPrayerDone(state.prayerCache?.[day]||[],day);
+        selectedMoveId=null;movingDay=null;saveState();render();loadPrayerTimes();
+      }
+      function setCalendarView(view) { state.view=view==='day'?'day':'week';saveState();render(); }
+      function render() {
+        sortTasks();
+        updateTrialNote();
+        $('planDate').value = state.date;
+        $('studyGoal').value = state.settings.studyGoal;
+        $('workoutGoal').value = state.settings.workoutGoal;
+        $('businessGoal').value = state.settings.businessGoal;
+        $('wakeTime').value = state.settings.wakeTime;
+        $('dailyFocus').value = state.dailyFocus?.[state.date] || '';
+        const focusDone=!!state.dailyFocusDone?.[state.date];
+        $('dailyFocusDone').checked=focusDone;
+        $('dailyFocusDone').disabled=!$('dailyFocus').value.trim();
+        $('focusDoneWrap').classList.toggle('visible',!!$('dailyFocus').value.trim());
+        $('dailyFocus').classList.toggle('completed',focusDone);
+        $('approvalState').textContent = state.approved ? `Godkänd för ${displayDate(state.date)}.` : '';
+        $('approveButton').textContent = state.approved ? 'Plan godkänd ✓' : `Godkänn plan för ${displayDate(state.date)}`;
+        renderHistory();
+        renderWeekCalendar();
+        renderConflicts();
+        applyLanguage();
+      }
+      function renderConflicts() {
+        const pairs=[];
+        const sorted=state.tasks.filter(t=>t.type!=='prayer'&&minutes(t.start)!==null&&minutes(t.end)!==null).sort((a,b)=>minutes(a.start)-minutes(b.start));
+        for(let i=0;i<sorted.length;i++) for(let j=i+1;j<sorted.length;j++) {
+          if(minutes(sorted[j].start)>=minutes(sorted[i].end)) break;
+          pairs.push(`${sorted[i].name} och ${sorted[j].name}`);
+        }
+        const box=$('conflicts');
+        box.style.display=pairs.length?'block':'none';
+        box.textContent=pairs.length?(state.language==='en'?`Schedule conflict${pairs.length===1?'':'s'}: ${pairs.join('; ')}. Move or edit one of the tasks.`:`Tidskrock${pairs.length>1?'ar':''}: ${pairs.join('; ')}. Flytta ett flexibelt block eller redigera tiderna.`):'';
+      }
+      function hasTaskConflict(day,start,end,excludeId=null) {
+        return calendarItems(day).some(item=>item.type!=='prayer'&&item.id!==excludeId&&minutes(start)<minutes(item.end)&&minutes(end)>minutes(item.start));
+      }
+      function planTasksForDay(day) {
+        const tasks=day===state.date?state.tasks:state.plans?.[day]?.tasks;
+        if(Array.isArray(tasks))return tasks;
+        const template=state.weekTemplates?.[weekdayKey(day)]?.length?state.weekTemplates[weekdayKey(day)]:defaultDayTasks(day);
+        return template.map((task,index)=>({...task,id:`${day}-template-${index}`,done:false}));
+      }
+      function reflowTaskChange(tasks,block) {
+        const start=minutes(block.start),end=minutes(block.end);
+        if(!Number.isInteger(start)||!Number.isInteger(end)||start<60||end>1440||end<=start)return {ok:false,reason:'Blocket måste rymmas mellan 01:00 och midnatt.'};
+        const next=tasks.filter(task=>task.id!==block.id).map(task=>({...task}));
+        const shifted=new Set();
+        if(block.type!=='prayer'){
+          const originalOrder=tasks.filter(task=>task.type!=='prayer').slice().sort((a,b)=>minutes(a.start)-minutes(b.start)||minutes(a.end)-minutes(b.end));
+          const originalIndex=originalOrder.findIndex(task=>task.id===block.id),original=originalOrder[originalIndex];
+          if(original){
+            const endDelta=end-minutes(original.end);
+            if(endDelta<0){
+              for(const following of originalOrder.slice(originalIndex+1)){
+                const task=next.find(value=>value.id===following.id);
+                task.start=timeFromMinutes(minutes(task.start)+endDelta);task.end=timeFromMinutes(minutes(task.end)+endDelta);shifted.add(task.id);
+              }
+            }
+            if(start<minutes(original.start)){
+              let availableUntil=start;
+              for(const preceding of originalOrder.slice(0,originalIndex).reverse()){
+                const task=next.find(value=>value.id===preceding.id),duration=minutes(task.end)-minutes(task.start);
+                if(minutes(task.end)>availableUntil){
+                  if(availableUntil-duration<60)return {ok:false,reason:'Alla pass får inte plats efter 01:00. Välj en senare tid eller korta ett pass.'};
+                  task.end=timeFromMinutes(availableUntil);task.start=timeFromMinutes(availableUntil-duration);shifted.add(task.id);
+                }
+                availableUntil=minutes(task.start);
+              }
+            }
+          }
+          let occupiedUntil=end;
+          const ordered=next.filter(task=>task.type!=='prayer').sort((a,b)=>minutes(a.start)-minutes(b.start)||minutes(a.end)-minutes(b.end));
+          for(const task of ordered){
+            const taskStart=minutes(task.start),taskEnd=minutes(task.end);
+            if(taskEnd<=start||taskStart>=occupiedUntil)continue;
+            const duration=taskEnd-taskStart,newEnd=occupiedUntil+duration;
+            if(!Number.isInteger(duration)||duration<1||newEnd>1440)return {ok:false,reason:'Alla pass får inte plats före midnatt. Välj en tidigare tid eller korta ett pass.'};
+            task.start=timeFromMinutes(occupiedUntil);task.end=timeFromMinutes(newEnd);
+            occupiedUntil=newEnd;shifted.add(task.id);
+          }
+        }
+        next.push({...block});
+        next.sort((a,b)=>minutes(a.start)-minutes(b.start));
+        return {ok:true,tasks:next,shifted:[...shifted]};
+      }
+      function commitPlanTasks(day,tasks) {
+        state.plans=state.plans||{};
+        state.plans[day]={...state.plans[day],tasks,approved:false,explicitEmpty:tasks.length===0};
+        if(day===state.date){state.tasks=tasks;state.approved=false;}
+      }
+      function showReflowToast(message,result,ishaShift=null) {
+        const count=result?.shifted?.length||0;
+        if(count)message+=' '+(state.language==='en'?`${count} other session${count===1?'':'s'} moved automatically.`:`${count} andra pass flyttades automatiskt.`);
+        if(ishaShift===false)message+=' '+translateText('Isha får inte plats efter passen före midnatt. Justera kvällens tider.');
+        showToast(message);
+      }
+      function renderHistory() {
+        const container=$('weeklyHistory');
+        if(!container)return;
+        const currentWeek=weekStart(dateKey(new Date()));
+        const starts=Array.from({length:4},(_,index)=>offsetDate(currentWeek,-7*index));
+        const history=[...(state.history||[])];
+        const weeks=starts.map((start,index)=>{
+          const entries=history.filter(entry=>weekStart(entry.date)===start);
+          const studyPlanned=entries.reduce((sum,entry)=>sum+(entry.studyPlanned||0),0);
+          const studyDone=entries.reduce((sum,entry)=>sum+(entry.studyDone||0),0);
+          const workouts=entries.reduce((sum,entry)=>sum+(entry.workoutsDone||0),0);
+          const business=entries.reduce((sum,entry)=>sum+(entry.businessDone||0),0);
+          const locale=state.language==='en'?'en-GB':'sv-SE';
+          const label=state.language==='en'?(index===0?'This week':`Week of ${new Intl.DateTimeFormat(locale,{day:'numeric',month:'short'}).format(new Date(start+'T12:00:00'))}`):(index===0?'Den här veckan':`Veckan ${new Intl.DateTimeFormat(locale,{day:'numeric',month:'short'}).format(new Date(start+'T12:00:00'))}`);
+          const summary=state.language==='en'?`Study ${studyDone.toFixed(1).replace(/\.0$/,'')}/${studyPlanned.toFixed(1).replace(/\.0$/,'')} h · Workouts ${workouts} · Liv Kol ${business.toFixed(1).replace(/\.0$/,'')} h`:`Plugg ${studyDone.toFixed(1).replace(/\.0$/,'')}/${studyPlanned.toFixed(1).replace(/\.0$/,'')} h · Träning ${workouts} pass · Liv Kol ${business.toFixed(1).replace(/\.0$/,'')} h`;
+          const checked=state.language==='en'?`${entries.length} ${entries.length===1?'day':'days'} reviewed`:`${entries.length} ${entries.length===1?'dag':'dagar'} avstämda`;
+          return `<div class="history-week"><strong>${label} · ${checked}</strong><div>${summary}</div></div>`;
+        }).join('');
+        const recent=history.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
+        const archive=recent.length?`<details style="margin-top:11px"><summary class="small-note" style="cursor:pointer">${state.language==='en'?'Recent check-ins':'Visa senaste avstämda dagar'}</summary><div class="history-list">${recent.map(entry=>`<div class="history-week"><strong>${safe(displayDate(entry.date))}</strong><div>${entry.unfinished?`${state.language==='en'?'Not done:':'Ej gjort:'} ${safe(entry.unfinished)}${entry.moved?(state.language==='en'?' · moved to tomorrow':' · flyttat till i morgon'):''}`:(state.language==='en'?'Plan marked complete':'Planen markerad klar')}</div></div>`).join('')}</div></details>`:'';
+        container.innerHTML=weeks+(archive||`<div class="small-note">${state.language==='en'?'Reviewed days and weekly totals will appear here.':'Avstämda dagar och veckosiffror visas här.'}</div>`);
+      }
+      function openEveningReview(day=dateKey(new Date())) {
+        if((state.history||[]).some(entry=>entry.date===day)){showToast('Den dagen finns redan i historiken.');return;}
+        saveState();
+        reviewDate=day;
+        const plan=state.plans?.[day]||(state.date===day?{tasks:state.tasks||[]}:{tasks:[]});
+        reviewItems=(plan.tasks||[]).map(task=>({id:`task:${task.id}`,label:`${task.name} · ${task.start}–${task.end}`,kind:'task',task}));
+        const focus=(state.dailyFocus?.[day]||'').trim();
+        if(focus)reviewItems.unshift({id:'focus',label:`Huvuduppgift: ${focus}`,kind:'focus'});
+        $('reviewHeading').textContent=`${state.language==='en'?'Check-in':'Avstämning'} · ${displayDate(day)}`;
+        $('reviewQuestion').textContent=reviewItems.length?(state.language==='en'?'Did you complete today’s plan?':'Blev dagens plan gjord?'):(state.language==='en'?`No saved blocks found for ${displayDate(day)} in Dagkompass. Calendar sync is not connected yet.`:`Jag hittar inga sparade block för ${displayDate(day)} i Dagkompass. Kalenderkoppling är inte aktiv ännu.`);
+        $('reviewStart').classList.remove('review-hidden');
+        $('reviewFollowup').classList.add('review-hidden');
+        $('reviewMoveActions').classList.remove('review-hidden');
+        $('reviewContinue').classList.add('review-hidden');
+        $('reviewNotAll').disabled=!reviewItems.length;
+        $('reviewUnfinished').innerHTML=reviewItems.map(item=>`<label class="review-item-option"><input type="checkbox" data-review-id="${safe(item.id)}"><span>${safe(item.label)}</span></label>`).join('');
+        $('reviewDialog').showModal();
+        applyLanguage($('reviewDialog'));
+      }
+      function selectedReviewItems() {
+        const ids=new Set([...$('reviewUnfinished').querySelectorAll('[data-review-id]:checked')].map(input=>input.dataset.reviewId));
+        return reviewItems.filter(item=>ids.has(item.id));
+      }
+      function updateReviewMoveHint() {
+        const items=selectedReviewItems();
+        const moveButton=$('reviewMoveTomorrow');
+        const leaveButton=$('reviewLeave');
+        moveButton.disabled=!items.length;leaveButton.disabled=!items.length;
+        if(!items.length){$('reviewMoveHint').textContent=state.language==='en'?'Select what did not get done.':'Markera det som inte blev gjort.';applyLanguage($('reviewDialog'));return;}
+        if(items.some(item=>item.kind==='focus')&&(state.dailyFocus?.[offsetDate(reviewDate,1)]||'').trim()){
+          $('reviewMoveHint').textContent=state.language==='en'?'Tomorrow already has a main focus. Unselect the main focus or edit tomorrow’s plan first.':'I morgondagens plan finns redan en huvuduppgift. Ta bort markeringen för huvuduppgiften eller ändra morgondagen först.';
+          moveButton.disabled=true;applyLanguage($('reviewDialog'));return;
+        }
+        $('reviewMoveHint').textContent=state.language==='en'?`${items.length} selected item${items.length===1?'':'s'} will be saved in history. If moved, flexible blocks are placed in tomorrow’s first available times.`:`${items.length} vald${items.length===1?' sak':'a saker'} sparas i historiken. Om du flyttar dem läggs flexibla block in i morgondagens första lediga tider.`;
+        applyLanguage($('reviewDialog'));
+      }
+      function moveMissedToTomorrow(item) {
+        const tomorrow=offsetDate(reviewDate,1);
+        if(item.kind==='focus'){
+          if((state.dailyFocus?.[tomorrow]||'').trim())return {ok:false,reason:'Morgondagen har redan en huvuduppgift.'};
+          state.dailyFocus=state.dailyFocus||{};state.dailyFocus[tomorrow]=state.dailyFocus[reviewDate];
+          state.dailyFocusDone=state.dailyFocusDone||{};state.dailyFocusDone[tomorrow]=false;
+          return {ok:true,start:null};
+        }
+        const task=item.task;
+        const duration=Math.max(15,minutes(task.end)-minutes(task.start));
+        const plan=state.plans?.[tomorrow]||{tasks:[],approved:false};
+        const existing=[...(plan.tasks||[]),...(state.prayerCache?.[tomorrow]||[])];
+        const original=minutes(task.start);
+        const first=Math.ceil(original/30)*30;
+        const candidates=[];
+        for(let at=first;at+duration<=1440;at+=30)candidates.push(at);
+        for(let at=360;at<first&&at+duration<=1440;at+=30)candidates.push(at);
+        const start=candidates.find(at=>!existing.some(other=>{
+          const a=minutes(other.start),b=minutes(other.end);
+          return a!==null&&b!==null&&at<b&&at+duration>a;
+        }));
+        if(start===undefined)return {ok:false,reason:'Jag hittar ingen ledig tid i morgondagens plan. Blocket ligger kvar i historiken så att du kan välja en tid själv.'};
+        const newStart=timeFromMinutes(start),newEnd=timeFromMinutes(start+duration);
+        const carried={...task,id:`carry-${reviewDate}-${task.id}`,start:newStart,end:newEnd,done:false};
+        state.plans=state.plans||{};state.plans[tomorrow]={...plan,tasks:[...(plan.tasks||[]),carried],approved:false};
+        if(state.date===tomorrow){state.tasks=state.plans[tomorrow].tasks;state.approved=false;}
+        return {ok:true,start:newStart};
+      }
+      function archiveReviewedDay(day,incompleteIds=[],moveToTomorrow=false) {
+        incompleteIds=Array.isArray(incompleteIds)?incompleteIds:(incompleteIds?[incompleteIds]:[]);
+        const plan=state.plans?.[day]||{tasks:[]};
+        const focus=(state.dailyFocus?.[day]||'').trim();
+        const tomorrow=offsetDate(day,1);
+        if(plan.approved)rememberWeekTemplate(day,plan.tasks||[]);
+        if(!state.plans?.[tomorrow]?.tasks?.length)createTemplateDraft(tomorrow);
+        const moveResults=[];
+        if(moveToTomorrow){
+          const previousPlan=state.plans?.[tomorrow]?JSON.parse(JSON.stringify(state.plans[tomorrow])):null;
+          const previousFocus=JSON.parse(JSON.stringify(state.dailyFocus||{}));
+          const previousFocusDone=JSON.parse(JSON.stringify(state.dailyFocusDone||{}));
+          const previousTasks=JSON.parse(JSON.stringify(state.tasks||[])),previousApproved=state.approved;
+          for(const incompleteId of incompleteIds){
+            const item=reviewItems.find(entry=>entry.id===incompleteId);
+            if(!item)continue;
+            const result=moveMissedToTomorrow(item);
+            if(!result.ok){
+              if(previousPlan)state.plans[tomorrow]=previousPlan;else delete state.plans[tomorrow];
+              state.dailyFocus=previousFocus;state.dailyFocusDone=previousFocusDone;
+              state.tasks=previousTasks;state.approved=previousApproved;
+              $('reviewMoveHint').textContent=translateText(result.reason);return false;
+            }
+            moveResults.push(result);
+          }
+        }
+        const missed=new Set(incompleteIds);
+        const tasks=(plan.tasks||[]).map(task=>({...task,completed:!missed.has(`task:${task.id}`)}));
+        const focusCompleted=!!focus&&!missed.has('focus');
+        state.dailyFocusDone=state.dailyFocusDone||{};
+        if(focus)state.dailyFocusDone[day]=focusCompleted;
+        const completed=tasks.filter(task=>task.completed);
+        const studyPlanned=(plan.tasks||[]).filter(task=>['study','class'].includes(task.type)).reduce((sum,task)=>sum+durationHours(task),0);
+        const studyDone=completed.filter(task=>['study','class'].includes(task.type)).reduce((sum,task)=>sum+durationHours(task),0);
+        const unfinished=incompleteIds.map(id=>reviewItems.find(item=>item.id===id)?.label).filter(Boolean);
+        const entry={date:day,focus,focusCompleted,tasks,unfinished:unfinished.join(', ')||null,moved:moveToTomorrow&&moveResults.length>0,movedTo:moveToTomorrow?tomorrow:null,movedStart:moveResults.find(result=>result.start)?.start||null,studyPlanned,studyDone,workoutsDone:completed.filter(task=>task.type==='workout').length,businessDone:completed.filter(task=>task.type==='business').reduce((sum,task)=>sum+durationHours(task),0)};
+        state.history=(state.history||[]).filter(previous=>previous.date!==day).concat(entry).sort((a,b)=>a.date.localeCompare(b.date));
+        state.reviewPromptDismissed=state.reviewPromptDismissed||{};state.reviewPromptDismissed[day]=true;
+        if(state.plans?.[day])state.plans[day]={...state.plans[day],approved:true};
+        state.date=tomorrow;activatePlan(tomorrow);
+        $('reviewDialog').close();
+        saveState();render();loadPrayerTimes();
+        const prepared=!!state.plans?.[tomorrow]?.tasks?.length;
+        const nextStep=prepared?'Morgondagens utkast är klart.':'Första planen för veckodagen saknas ännu.';
+        const message=moveToTomorrow?(state.language==='en'?`The day was saved and ${moveResults.length} item${moveResults.length===1?'':'s'} moved to tomorrow. ${prepared?'Tomorrow’s draft is ready.':'There is no template for this weekday yet.'}`:`Dagen sparades och ${moveResults.length} sak${moveResults.length===1?'':'er'} flyttades till morgondagen. ${nextStep}`):(state.language==='en'?`The day was saved. ${prepared?'Tomorrow’s draft is ready.':'There is no template for this weekday yet.'}`:`Dagen sparades. ${nextStep}`);
+        showToast(message);
+        return true;
+      }
+      function maybePromptEveningReview() {
+        const now=new Date(),day=dateKey(now);
+        if(now.getHours()<20||$('reviewDialog').open)return;
+        if((state.history||[]).some(entry=>entry.date===day)||state.reviewPromptDismissed?.[day])return;
+        openEveningReview(day);
+      }
+      function taskById(id) { return state.tasks.find(t=>t.id===id); }
+      function timeFromMinutes(total) { return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`; }
+      function findFlexibleBlock(id) { return taskById(id)||state.prayerEvents.find(event=>event.id===id); }
+      function autoShiftIshaAfterConflicts() {
+        const isha=state.prayerEvents.find(event=>event.name.startsWith('Isha'));
+        if(!isha||isha.done)return null;
+        let start=Math.max(minutes(isha.start),minutes(isha.sourceStart||isha.start));
+        for(let pass=0;pass<state.tasks.length;pass++) {
+          const overlaps=state.tasks.filter(task=>minutes(task.start)<start+15&&minutes(task.end)>start);
+          if(!overlaps.length)break;
+          start=Math.max(...overlaps.map(task=>minutes(task.end)));
+        }
+        if(start===minutes(isha.start)||start+15>1440)return null;
+        const newStart=timeFromMinutes(start), newEnd=start+15===1440?'24:00':timeFromMinutes(start+15);
+        isha.start=newStart;isha.end=newEnd;
+        state.prayerOverrides=state.prayerOverrides||{};
+        state.prayerOverrides[state.date]=state.prayerOverrides[state.date]||{};
+        state.prayerOverrides[state.date].isha={start:newStart,end:newEnd};
+        state.prayerCache[state.date]=state.prayerEvents;
+        return newStart;
+      }
+      function setPrayerOverride(day,task) {
+        state.prayerOverrides=state.prayerOverrides||{};state.prayerOverrides[day]=state.prayerOverrides[day]||{};
+        state.prayerOverrides[day][task.name.startsWith('Isha')?'isha':task.id]={start:task.start,end:task.end};
+      }
+      function autoShiftIshaForDay(day,tasks) {
+        const isha=calendarItems(day).find(item=>item.name.startsWith('Isha'));
+        if(!isha||isha.done)return null;
+        const duration=Math.max(1,minutes(isha.end)-minutes(isha.start));
+        let start=minutes(isha.start);
+        for(let pass=0;pass<tasks.length+1;pass++){
+          const conflicts=tasks.filter(task=>task.type!=='prayer'&&minutes(task.start)<start+duration&&minutes(task.end)>start);
+          if(!conflicts.length)break;
+          start=Math.max(...conflicts.map(task=>minutes(task.end)));
+        }
+        if(start+duration>1440)return false;
+        if(start===minutes(isha.start))return null;
+        isha.start=timeFromMinutes(start);isha.end=timeFromMinutes(start+duration);setPrayerOverride(day,isha);
+        if(day===state.date)state.prayerEvents=applyPrayerDone(state.prayerCache?.[day]||[],day);
+        return isha.start;
+      }
+      function moveFlexibleTask(id,newStart) { return moveWeekEvent(id,state.date,state.date,newStart); }
+      function finishResize(session) {
+        const item=calendarItems(session.day).find(value=>value.id===session.id),startMinute=session.startMinute,endMinute=session.endMinute;
+        if(!item||!startMinute||!endMinute)return;
+        const newStart=timeFromMinutes(startMinute),newEnd=timeFromMinutes(endMinute);
+        if(startMinute===minutes(session.start)&&endMinute===minutes(session.end)){renderWeekCalendar();return;}
+        const planned=planTasksForDay(session.day),task=planned.find(value=>value.id===session.id);
+        let result;
+        if(task){
+          result=reflowTaskChange(planned,{...task,start:newStart,end:newEnd});
+          if(!result.ok){renderWeekCalendar();showToast(result.reason);return;}
+          commitPlanTasks(session.day,result.tasks);
+        }else if(item.type==='prayer'){
+          setPrayerOverride(session.day,{...item,start:newStart,end:newEnd});
+          if(session.day===state.date)state.prayerEvents=applyPrayerDone(state.prayerCache?.[session.day]||[],session.day);
+        }else{
+          renderWeekCalendar();return;
+        }
+        const movedIsha=task&&task.type!=='prayer'?autoShiftIshaForDay(session.day,result.tasks):null;
+        saveState();render();showReflowToast(translateText(`Blocket ändrat till ${newStart}–${endMinute===1440?'00:00':newEnd}.`),result,movedIsha);
+      }
+      function moveWeekEvent(id,fromDay,toDay,newStart) {
+        const sourceItems=calendarItems(fromDay),task=sourceItems.find(item=>item.id===id);
+        if(!task)return false;
+        const startMinute=minutes(newStart),duration=Math.max(1,minutes(task.end)-minutes(task.start)),endMinute=startMinute+duration;
+        if(startMinute<60||endMinute>1440){showToast('Blocket måste rymmas mellan 01:00 och midnatt.');return false;}
+        const proposedEnd=endMinute===1440?'24:00':timeFromMinutes(endMinute);
+        const sourceTasks=planTasksForDay(fromDay),sourceTask=sourceTasks.find(item=>item.id===id);
+        let result;
+        if(!sourceTask&&task.type==='prayer'&&fromDay!==toDay){
+          const destination=calendarItems(toDay).find(item=>item.type==='prayer'&&item.name===task.name);
+          if(!destination){showToast('Bönetiderna för måldagen har inte laddats ännu.');return false;}
+          const sourceKey=task.name.startsWith('Isha')?'isha':task.id;
+          delete state.prayerOverrides?.[fromDay]?.[sourceKey];
+          destination.start=newStart;destination.end=endMinute===1440?'24:00':timeFromMinutes(endMinute);setPrayerOverride(toDay,destination);
+          if(fromDay===state.date)state.prayerEvents=applyPrayerDone(state.prayerCache?.[fromDay]||[],fromDay);
+          if(toDay===state.date)state.prayerEvents=applyPrayerDone(state.prayerCache?.[toDay]||[],toDay);
+        }
+        else if(!sourceTask&&task.type==='prayer') {
+          setPrayerOverride(fromDay,{...task,start:newStart,end:proposedEnd});
+          if(fromDay===state.date)state.prayerEvents=applyPrayerDone(state.prayerCache?.[fromDay]||[],fromDay);
+        }
+        else {
+          if(!sourceTask){showToast('Det blocket kunde inte hittas i dagens plan.');return false;}
+          const moved={...sourceTask,id:fromDay===toDay?id:`carry-${Date.now()}`,start:newStart,end:proposedEnd,done:fromDay===toDay?sourceTask.done:false};
+          result=reflowTaskChange(fromDay===toDay?sourceTasks:planTasksForDay(toDay),moved);
+          if(!result.ok){showToast(result.reason);return false;}
+          if(fromDay!==toDay)commitPlanTasks(fromDay,sourceTasks.filter(item=>item.id!==id));
+          commitPlanTasks(toDay,result.tasks);
+        }
+        const dayTasks=planTasksForDay(toDay);
+        const movedIsha=task.name.startsWith('Isha')?null:autoShiftIshaForDay(toDay,dayTasks);
+        selectedMoveId=null;movingDay=null;saveState();render();
+        showReflowToast(translateText(movedIsha?`Blocket flyttades. Isha flyttades till ${movedIsha}.`:fromDay===toDay?`Blocket flyttades till ${newStart}.`:`Blocket flyttades till ${displayDate(toDay)}.`),result,movedIsha);
+        return true;
+      }
+      function studyHours() { return state.tasks.filter(t=>['study','class'].includes(t.type)).reduce((sum,t)=>sum+durationHours(t),0); }
+      function parsePrayerTimes(html, day) {
+        const date=Number(day.split('-')[2]);
+        const documentFromSource=new DOMParser().parseFromString(html,'text/html');
+        const rows=[...documentFromSource.querySelectorAll('.table tbody tr')];
+        const row=rows.find(candidate=>Number(candidate.cells[0]?.textContent.trim())===date);
+        if(!row||row.cells.length<7) return [];
+        const times=[...row.cells].slice(1,7).map(cell=>cell.textContent.trim().match(/\b\d{1,2}:\d{2}\b/)?.[0]);
+        if(times.length!==6||times.some(time=>!time)) return [];
+        const [,sunrise,dhuhr,asr,maghrib,isha]=times;
+        const fajr='06:00';
+        const starts=[['fajr','Fajr · Gryningsbönen',fajr],['dhuhr','Dhuhr · Middagsbönen',dhuhr],['asr','Asr · Eftermiddagsbönen',asr],['maghrib','Maghrib · Solnedgångsbönen',maghrib],['isha','Isha · Kvällsbönen',isha]];
+        return starts.map(([key,name,start])=>{
+          const endMinutes=minutes(start)+(key==='fajr'?50:15);
+          const end=`${String(Math.floor(endMinutes/60)%24).padStart(2,'0')}:${String(endMinutes%60).padStart(2,'0')}`;
+          return {id:`prayer-${day}-${key}`,name,start,end,sourceStart:start,type:'prayer',fixed:false,done:false};
+        }).sort((a,b)=>a.start.localeCompare(b.start));
+      }
+      async function loadPrayerTimes() {
+        const days=daysInWeek(state.date),day=state.date;
+        const refreshed=new Set();
+        state.prayerCache=state.prayerCache||{};
+        state.prayerEvents=applyPrayerDone(state.prayerCache[day]||[],day);
+        $('prayerStatus').textContent=state.prayerCache[day]?.length?'Visar sparade tider medan veckans tabell uppdateras…':'Hämtar veckans tider…';
+        render();
+        try {
+          const months=[...new Set(days.map(value=>value.slice(0,7)))];
+          for(const monthKey of months){
+            const [year,month]=monthKey.split('-').map(Number);
+            const response=await fetch(`https://islam.nu/bonetider/sundsvall/${year}/${month}/`,{cache:'no-store'});
+            if(!response.ok)continue;
+            const html=await response.text();
+            for(const weekDay of days.filter(value=>value.startsWith(monthKey))){
+              const events=parsePrayerTimes(html,weekDay);
+              if(events.length===5){state.prayerCache[weekDay]=events;refreshed.add(weekDay);}
+            }
+          }
+          state.prayerEvents=applyPrayerDone(state.prayerCache[state.date]||[],state.date);
+          saveState();
+          $('prayerStatus').textContent=refreshed.has(state.date)?'Uppdaterat för veckan · källa: islam.nu':state.prayerCache?.[state.date]?.length?'Visar senast hämtade tider. Kunde inte uppdatera just nu.':'Kunde inte hämta dagens bönetider just nu.';
+          render();
+        } catch {
+          const cached=state.prayerCache[day]||[];
+          $('prayerStatus').textContent=cached.length?'Visar senast hämtade tider. Kunde inte uppdatera just nu.':'Kunde inte hämta tiderna just nu. Kontrollera nätet eller öppna islam.nu.';
+          render();
+        }
+      }
+      function openDialog(task=null,day=state.date,start=null) {
+        if(day!==state.date)selectPlanDate(day);
+        task=task?taskById(task.id)||task:null;
+        editId = task?.id || null;
+        editDay = day;
+        colorManuallySet=!!task?.color;
+        $('dialogHeading').textContent = task ? 'Redigera block' : 'Nytt block';
+        $('blockName').value = task?.name || '';
+        const suggestedStart=start||'08:00';
+        $('blockStart').value = task?.start || suggestedStart;
+        $('blockEnd').value = task?.end || timeFromMinutes(Math.min(minutes(suggestedStart)+60,1439));
+        $('blockType').value = task?.type || 'study';
+        $('blockColor').value = colorForTask(task||{type:$('blockType').value});
+        renderColorSwatches($('blockColor').value);
+        $('blockDialog').showModal();applyLanguage($('blockDialog'));
+      }
+      function addMinutes(time, amount) { const total=(minutes(time)+amount+1440)%1440; return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`; }
+      function showToast(message) { const node=$('toast'); node.textContent=translateText(storageWriteFailed?'Sparandet fungerar inte just nu. Spara en säkerhetskopia innan du stänger appen.':message); node.classList.add('show'); setTimeout(()=>node.classList.remove('show'),storageWriteFailed?8000:4200); }
+
+      const isNewTrial=!state.trialStart;
+      applyFajrAndMorningMigration();
+      if(isNewTrial){saveState();state.trialStart=tomorrowKey();state.date=state.trialStart;activatePlan(state.date);}
+      $('planDate').value = state.date || tomorrowKey();
+      state.date = $('planDate').value;
+      saveState();
+      $('dayViewButton').addEventListener('click',()=>setCalendarView('day'));
+      $('weekViewButton').addEventListener('click',()=>setCalendarView('week'));
+      $('planDate').addEventListener('change', () => { saveState(); state.date=$('planDate').value; activatePlan(state.date); saveState(); loadPrayerTimes(); });
+      $('prevWeek').addEventListener('click',()=>{const target=offsetDate(state.date,state.view==='day'?-1:-7);saveState();state.date=target;activatePlan(target);$('planDate').value=target;saveState();loadPrayerTimes();});
+      $('nextWeek').addEventListener('click',()=>{const target=offsetDate(state.date,state.view==='day'?1:7);saveState();state.date=target;activatePlan(target);$('planDate').value=target;saveState();loadPrayerTimes();});
+      $('todayWeek').addEventListener('click',()=>{const target=dateKey(new Date());saveState();state.date=target;activatePlan(target);$('planDate').value=target;saveState();loadPrayerTimes();});
+      $('exportBackup').addEventListener('click',exportBackup);
+      $('importBackupButton').addEventListener('click',()=>$('importBackupFile').click());
+      $('importBackupFile').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)importBackup(file);event.target.value='';});
+      $('reviewButton').addEventListener('click',()=>openEveningReview(state.date));
+      $('prepareTrialButton').addEventListener('click',prepareTrialDrafts);
+      $('reviewClose').addEventListener('click',()=>$('reviewDialog').close());
+      $('reviewDialog').addEventListener('close',()=>{
+        if(reviewDate&&!state.history.some(entry=>entry.date===reviewDate)){
+          state.reviewPromptDismissed=state.reviewPromptDismissed||{};state.reviewPromptDismissed[reviewDate]=true;saveState();
+        }
+      });
+      $('reviewAllDone').addEventListener('click',()=>archiveReviewedDay(reviewDate));
+      $('reviewNotAll').addEventListener('click',()=>{
+        $('reviewStart').classList.add('review-hidden');
+        $('reviewFollowup').classList.remove('review-hidden');
+        if(!reviewItems.length){
+          $('reviewQuestion').textContent=state.language==='en'?'I cannot find any blocks or a main focus for this day. You can save the day to your history.':'Jag hittar inga block eller någon huvuduppgift för dagen. Du kan spara dagen i historiken.';
+          $('reviewMoveActions').classList.add('review-hidden');
+          $('reviewContinue').classList.remove('review-hidden');
+        }else{
+          $('reviewQuestion').textContent=state.language==='en'?'Select what did not get done.':'Välj det som inte blev gjort.';
+          updateReviewMoveHint();
+        }
+        applyLanguage($('reviewDialog'));
+      });
+      $('reviewUnfinished').addEventListener('change',updateReviewMoveHint);
+      $('reviewMoveTomorrow').addEventListener('click',()=>{const items=selectedReviewItems();if(items.length)archiveReviewedDay(reviewDate,items.map(item=>item.id),true);});
+      $('reviewLeave').addEventListener('click',()=>{const items=selectedReviewItems();if(items.length)archiveReviewedDay(reviewDate,items.map(item=>item.id),false);});
+      $('reviewContinue').addEventListener('click',()=>archiveReviewedDay(reviewDate));
+      $('dailyFocus').addEventListener('input', () => {
+        state.dailyFocus=state.dailyFocus||{};
+        state.dailyFocus[state.date]=$('dailyFocus').value;
+        state.dailyFocusDone=state.dailyFocusDone||{};
+        state.dailyFocusDone[state.date]=false;
+        $('dailyFocusDone').checked=false;
+        $('dailyFocusDone').disabled=!$('dailyFocus').value.trim();
+        $('focusDoneWrap').classList.toggle('visible',!!$('dailyFocus').value.trim());
+        $('dailyFocus').classList.remove('completed');
+        state.approved=false;
+        saveState();
+        $('approvalState').textContent='';
+        $('approveButton').textContent=state.language==='en'?`Approve plan for ${displayDate(state.date)}`:`Godkänn plan för ${displayDate(state.date)}`;
+      });
+      $('dailyFocusDone').addEventListener('change', () => {
+        state.dailyFocusDone=state.dailyFocusDone||{};
+        state.dailyFocusDone[state.date]=$('dailyFocusDone').checked;
+        $('dailyFocus').classList.toggle('completed',$('dailyFocusDone').checked);
+        saveState();
+      });
+      ['studyGoal','workoutGoal','businessGoal','wakeTime'].forEach(id => $(id).addEventListener('change', () => {
+        const key = id; state.settings[key] = id==='wakeTime' ? $(id).value : Number($(id).value||0); state.approved=false; saveState(); render();
+      }));
+      $('addBlock').addEventListener('click', () => openDialog());
+      $('colorSwatches').addEventListener('click',event=>{const swatch=event.target.closest('[data-color]');if(!swatch)return;$('blockColor').value=swatch.dataset.color;colorManuallySet=true;renderColorSwatches(swatch.dataset.color);applyLanguage($('blockDialog'));});
+      $('blockColor').addEventListener('input',()=>{colorManuallySet=true;renderColorSwatches($('blockColor').value);});
+      $('blockType').addEventListener('change',()=>{if(!colorManuallySet)$('blockColor').value=typeColors[$('blockType').value]||typeColors.other;});
+      $('cancelBlock').addEventListener('click', () => $('blockDialog').close());
+      $('blockForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const name=$('blockName').value.trim(), start=$('blockStart').value, end=$('blockEnd').value;
+        if (!name || minutes(end)<=minutes(start)) { showToast('Sluttiden behöver vara efter starttiden.'); return; }
+        const block={id:editId||`task-${Date.now()}`,name,start,end,type:$('blockType').value,color:$('blockColor').value,fixed:false,done:editId?!!taskById(editId)?.done:false};
+        const day=editDay||state.date,result=reflowTaskChange(planTasksForDay(day),block);
+        if(!result.ok){showToast(result.reason);return;}
+        commitPlanTasks(day,result.tasks);
+        const movedIsha=block.type!=='prayer'?autoShiftIshaForDay(day,result.tasks):null;
+        saveState();$('blockDialog').close();render();showReflowToast(translateText('Blocket sparades.'),result,movedIsha);
+      });
+      $('starterButton').addEventListener('click', () => {
+        if (state.tasks.length && !confirm(translateText('Ersätta blocken som redan finns med grundmallen?'))) return;
+        const day=state.date;
+        const tasks=defaultDayTasks(day);
+        if(!tasks.length){showToast(state.language==='en'?'Your time goals do not fit within the day. Reduce a goal or plan manually.':'Dina tidsmål ryms inte inom dagen. Minska ett mål eller planera manuellt.');return;}
+        state.tasks=tasks;
+        state.approved=false; saveState(); render(); showToast('Grundmallen är inlagd. Justera tiderna så de passar.');
+      });
+      $('approveButton').addEventListener('click', () => {
+        state.approved=true;rememberWeekTemplate(state.date,state.tasks);saveState();render();showToast('Planen är godkänd och sparad som mall för veckodagen.');
+      });
+      $('languageToggle').addEventListener('click',()=>{state.language=state.language==='en'?'sv':'en';saveState();render();applyTheme();});
+      applyTheme();
+      $('themeToggle').addEventListener('click',()=>{state.theme=state.theme==='dark'?'light':'dark';applyTheme();saveState();});
+      if(isNewTrial)prepareTrialDrafts();else render();
+      loadPrayerTimes();
+      maybePromptEveningReview();
+      setInterval(maybePromptEveningReview,60000);
+    })();
+  </script>
+</body>
+</html>
